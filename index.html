@@ -211,7 +211,7 @@ async function load(first){
   if(first){
     const b=L.latLngBounds(DATA.sensors.map(s=>[s.lat,s.lon]).concat([[37.4936,-121.9446]]));
     const mob=innerWidth<640;map.fitBounds(b,{paddingTopLeft:[mob?140:190,mob?150:110],paddingBottomRight:[mob?50:60,mob?90:innerWidth>=900?60:200]});
-    const o=+P.get('open');if(o&&markers[o]){if(MOB())show(o);else setTimeout(()=>{markers[o]._pinned=true;markers[o].openPopup()},300)}
+    const o=+P.get('open');if(o&&markers[o]){if(MOB())show(o);else{const y=map.latLngToContainerPoint(markers[o].getLatLng()).y;if(y<420)map.panBy([0,y-420],{animate:false});markers[o]._pinned=true;markers[o].openPopup()}}
   }else if(openId&&markers[openId])markers[openId].getPopup().update();
 }
 document.getElementById('seg').onclick=e=>{const w=e.target.dataset&&e.target.dataset.w;if(w){W=w;render()}};

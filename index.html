@@ -1,0 +1,228 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Air near Tesla Fremont · live PurpleAir AQI</title>
+<meta name="description" content="Live PurpleAir PM2.5 AQI near Lila Bringhurst Elementary, the Innovation community and Tesla Fremont. Updates every 20 minutes.">
+<meta name="theme-color" content="#ffffff">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<style>
+:root{--fg:#111827;--mut:#6b7280;--bd:rgba(17,24,39,.08);--glass:rgba(255,255,255,.88);--sh:0 1px 2px rgba(0,0,0,.06),0 8px 24px rgba(0,0,0,.10);--r:16px;
+  --font:-apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif}
+*{box-sizing:border-box}html,body{margin:0;height:100%;font-family:var(--font);color:var(--fg);-webkit-font-smoothing:antialiased}
+#map{position:fixed;inset:0;background:#eef0f3}
+.glass{background:var(--glass);backdrop-filter:saturate(1.6) blur(14px);-webkit-backdrop-filter:saturate(1.6) blur(14px);border:1px solid var(--bd);box-shadow:var(--sh);border-radius:var(--r)}
+/* top bar */
+#top{position:fixed;z-index:1000;top:calc(12px + env(safe-area-inset-top));left:12px;right:12px;display:flex;align-items:center;gap:12px;padding:10px 12px 10px 16px;max-width:760px}
+#top h1{font-size:17px;line-height:1.15;margin:0;font-weight:700;letter-spacing:-.01em;white-space:nowrap}
+#top .sub{font-size:12px;color:var(--mut);margin-top:2px;white-space:nowrap}
+#top .grow{flex:1;min-width:0}
+#pill{display:flex;align-items:center;gap:8px;padding:5px 6px 5px 12px;border-radius:999px;background:#f3f4f6;cursor:pointer;border:0;font:inherit;color:inherit}
+#pill .lab{font-size:11px;line-height:1.15;text-align:right;color:#374151}
+#pill .lab b{display:block;font-size:12px;color:var(--fg)}
+#pill .num{min-width:40px;height:32px;border-radius:999px;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:17px;padding:0 9px;font-variant-numeric:tabular-nums}
+.seg{display:inline-flex;background:#f3f4f6;border-radius:10px;padding:3px;gap:2px}
+.seg button{border:0;background:transparent;font:600 12px var(--font);color:#4b5563;padding:6px 10px;border-radius:8px;cursor:pointer;white-space:nowrap}
+.seg button.on{background:#fff;color:var(--fg);box-shadow:0 1px 3px rgba(0,0,0,.12)}
+/* markers */
+.m{display:flex;align-items:center;justify-content:center;width:36px;height:36px;border-radius:10px;font:800 15px var(--font);font-variant-numeric:tabular-nums;
+  border:2px solid rgba(255,255,255,.95);box-shadow:0 0 0 1px rgba(0,0,0,.25),0 3px 8px rgba(0,0,0,.25);transition:transform .15s;cursor:pointer}
+.m:hover{transform:scale(1.12)}
+.m.key{width:46px;height:46px;font-size:19px;border-radius:13px;box-shadow:0 0 0 2px #111827,0 4px 12px rgba(0,0,0,.35)}
+.m.na{background:#d1d5db!important;color:#6b7280!important}
+.place{display:flex;align-items:center;gap:6px;white-space:nowrap;font:600 11.5px var(--font);color:#374151;pointer-events:none}
+.place i{width:9px;height:9px;border-radius:50%;background:#fff;border:2.5px solid #374151;flex:none}
+.place span{flex:none;background:rgba(255,255,255,.9);padding:2px 7px;border-radius:7px;box-shadow:0 1px 3px rgba(0,0,0,.18)}
+.place.f i{border-radius:2px;background:#374151}
+.place.l{flex-direction:row-reverse}.place.l span{transform:translateY(-15px)}
+/* detail card (Leaflet popup) */
+.card .leaflet-popup-content-wrapper{padding:0;border-radius:18px;overflow:hidden;box-shadow:0 12px 40px rgba(0,0,0,.25)}
+.card .leaflet-popup-content{margin:0;width:300px!important;font-family:var(--font)}
+.card .leaflet-popup-tip{box-shadow:none}
+.card a.leaflet-popup-close-button{top:8px;right:8px;width:26px;height:26px;border-radius:50%;background:rgba(0,0,0,.12);color:inherit!important;font:600 18px/24px var(--font);text-align:center}
+.ch{padding:14px 16px 12px}
+.ch .nm{font-size:15px;font-weight:700;padding-right:28px;letter-spacing:-.01em}
+.ch .ds{font-size:11.5px;opacity:.75;margin-top:1px}
+.ch .row{display:flex;align-items:flex-end;gap:12px;margin-top:8px}
+.ch .big{font-size:58px;font-weight:800;line-height:.9;letter-spacing:-.03em;font-variant-numeric:tabular-nums}
+.ch .ct{font-size:16px;font-weight:700;line-height:1.1}
+.ch .ct small{display:block;font-size:11px;font-weight:600;opacity:.75;margin-bottom:2px}
+.ch .msg{font-size:12px;line-height:1.35;margin-top:8px;opacity:.9}
+.cb{padding:10px 12px 12px;background:#fff;color:var(--fg)}
+.chips{display:grid;grid-template-columns:repeat(6,1fr);gap:4px}
+.chip{border-radius:8px;text-align:center;padding:4px 0 5px}
+.chip small{display:block;font-size:9.5px;font-weight:600;opacity:.75;letter-spacing:.02em}
+.chip b{font-size:14px;font-variant-numeric:tabular-nums}
+.spk{margin-top:8px}
+.spk .t{display:flex;justify-content:space-between;font-size:10.5px;color:var(--mut);margin-bottom:2px}
+/* mobile docked card */
+#dock{position:fixed;z-index:1100;left:10px;right:10px;bottom:calc(10px + env(safe-area-inset-bottom));border-radius:20px;overflow:hidden;box-shadow:0 12px 40px rgba(0,0,0,.3);display:none;background:#fff}
+#dock.on{display:block}#dock .x{position:absolute;top:10px;right:10px;width:28px;height:28px;border-radius:50%;background:rgba(0,0,0,.12);border:0;font:600 18px var(--font);color:inherit;cursor:pointer}
+body.docked #sheet{display:none}
+/* bottom sheet */
+#sheet{position:fixed;z-index:1000;left:12px;right:12px;bottom:calc(12px + env(safe-area-inset-bottom));max-width:760px;padding:0;overflow:hidden}
+#sh{display:flex;align-items:center;gap:10px;padding:10px 14px;cursor:pointer;user-select:none}
+#sh .chev{width:22px;height:22px;border-radius:50%;background:#f3f4f6;display:flex;align-items:center;justify-content:center;transition:transform .2s;flex:none}
+#sheet.open #sh .chev{transform:rotate(180deg)}
+#sh .tt{font-size:13px;font-weight:700;white-space:nowrap}
+#sh .pk{font-size:12px;color:var(--mut);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#leg{margin-left:auto;display:flex;flex-direction:column;gap:2px;width:170px;flex:none}
+#leg .bar{height:6px;border-radius:3px;background:linear-gradient(90deg,#00e400 0%,#ffff00 16.7%,#ff7e00 33.3%,#ff0000 50%,#8f3f97 66.7%,#7e0023 100%)}
+#leg .tk{display:flex;justify-content:space-between;font-size:9.5px;color:var(--mut);font-variant-numeric:tabular-nums}
+#sb{display:none;padding:0 10px 8px}
+#sheet.open #sb{display:block}
+#chart{width:100%;height:min(150px,16vh);display:block}
+#foot{font-size:10.5px;color:var(--mut);padding:2px 4px 0}
+.leaflet-control-attribution{white-space:nowrap;font-size:9.5px!important;background:rgba(255,255,255,.7)!important;border-radius:6px 0 0 0}
+.leaflet-control-zoom{border:0!important;box-shadow:var(--sh)!important;border-radius:12px!important;overflow:hidden}
+.leaflet-control-zoom a{width:34px!important;height:34px!important;line-height:34px!important;color:#374151!important}
+@media (min-width:900px){
+  #top{right:auto}#sheet{left:12px;right:auto;width:620px}
+}
+@media (max-width:640px){
+  #top{flex-wrap:wrap;padding:10px 10px 10px 14px;gap:8px}
+  #top .seg{order:3;width:100%;display:flex}#top .seg button{flex:1}
+  #pill .lab span{display:none}#pill .lab b{font-size:11px;color:#4b5563}
+  #leg{width:120px}
+  #sh .pk{display:none}
+  .place.l span{white-space:normal;width:104px;text-align:right;line-height:1.2;transform:translate(-6px,-30px)}
+  #sheet,#dock{bottom:calc(20px + env(safe-area-inset-bottom))}
+  #top .sub .r{display:none}
+  .leaflet-control-zoom{display:none}
+}
+@media (min-width:2000px){#top{zoom:1.4}#sheet{zoom:1.4}.card .leaflet-popup-content-wrapper{zoom:1.35}}
+</style>
+</head>
+<body>
+<div id="map"></div>
+<div id="top" class="glass">
+  <div class="grow"><h1>Air near Tesla Fremont</h1><div class="sub" id="upd">Loading PurpleAir data…</div></div>
+  <div class="seg" id="seg"><button data-w="10minute">Now</button><button data-w="60minute" class="on">1 hr</button><button data-w="24hour">24 hr</button></div>
+  <button id="pill" title="Open the sensor next to Lila Bringhurst & Innovation"><span class="lab"><b>By the school</b><span id="pilll">1-hr AQI</span></span><span class="num" id="pilln">–</span></button>
+</div>
+<div id="dock"></div>
+<div id="sheet" class="glass">
+  <div id="sh"><span class="chev"><svg width="12" height="12" viewBox="0 0 12 12"><path d="M2 8l4-4 4 4" fill="none" stroke="#374151" stroke-width="2" stroke-linecap="round"/></svg></span>
+    <span class="tt">Last 3 days · 1a1a_ambition</span><span class="pk" id="pk"></span>
+    <div id="leg"><div class="bar"></div><div class="tk"><span>0</span><span>50</span><span>100</span><span>150</span><span>200</span><span>300+</span></div></div></div>
+  <div id="sb"><svg id="chart"></svg>
+    <div id="foot">Source: PurpleAir.com public sensors, raw readings (same as PurpleAir map). US EPA PM2.5 AQI. Squares show the selected average; tap or hover one for details.</div></div>
+</div>
+<script>
+const KEY=322702, SCHOOL=[37.50026,-121.94524];
+const P=new URLSearchParams(location.search);
+const STOPS=[[0,[0,228,0]],[50,[255,255,0]],[100,[255,126,0]],[150,[255,0,0]],[200,[143,63,151]],[300,[126,0,35]]];
+function col(a){if(a==null)return'#d1d5db';for(let i=1;i<STOPS.length;i++){const[a0,c0]=STOPS[i-1],[a1,c1]=STOPS[i];if(a<=a1){const t=Math.max(0,a-a0)/(a1-a0);return`rgb(${c0.map((x,j)=>Math.round(x+(c1[j]-x)*t)).join(',')})`}}return'rgb(126,0,35)'}
+function ink(a){return a!=null&&a>130?'#fff':'#111827'}
+const CATS=[[50,'Good','#00e400','Air quality is satisfactory, and air pollution poses little or no risk.'],
+ [100,'Moderate','#ffff00','Acceptable, but unusually sensitive people may be affected.'],
+ [150,'Unhealthy for Sensitive Groups','#ff7e00','Children, older adults and people with heart or lung disease may be affected.'],
+ [200,'Unhealthy','#ff0000','Some of the general public may be affected; sensitive groups more seriously.'],
+ [300,'Very Unhealthy','#8f3f97','Health alert: the risk of health effects is increased for everyone.'],
+ [1e9,'Hazardous','#7e0023','Health warning of emergency conditions.']];
+const cat=a=>CATS.find(c=>a<=c[0]);
+const WL={'10minute':'Now','60minute':'1-hr','24hour':'24-hr'};
+let W=['10minute','60minute','24hour'].includes(P.get('w'))?P.get('w'):'60minute';
+const MOB=()=>innerWidth<640;let dockId=null;
+function show(id){const s=DATA.sensors.find(x=>x.id===id);if(!s)return;dockId=id;const d=document.getElementById('dock');
+  d.innerHTML=card(s,d.clientWidth?d.clientWidth-24:innerWidth-44)+'<button class="x" aria-label="Close">×</button>';d.querySelector('.x').style.color=ink(s.aqi[W]);
+  d.querySelector('.x').onclick=hide;d.classList.add('on');document.body.classList.add('docked')}
+function hide(){dockId=null;document.getElementById('dock').classList.remove('on');document.body.classList.remove('docked')}
+let DATA=null,HIST=null,markers={},openId=null,hoverT=null;
+const map=L.map('map',{zoomControl:false,attributionControl:true,zoomSnap:.5,maxZoom:16});
+L.control.zoom({position:'bottomright'}).addTo(map);
+map.attributionControl.setPrefix('Data: <a href="https://map.purpleair.com/" target=_blank>PurpleAir.com</a> public sensors (raw)');
+const osm=L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'© OpenStreetMap'});
+const ESRI='https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/';
+const base=L.tileLayer(ESRI+'World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}',{maxZoom:16,attribution:'© Esri, HERE, Garmin, OpenStreetMap'});
+const ref=L.tileLayer(ESRI+'World_Light_Gray_Reference/MapServer/tile/{z}/{y}/{x}',{maxZoom:16,pane:'overlayPane'});
+let tileErr=0;base.on('tileerror',()=>{if(++tileErr==4){map.removeLayer(base);map.removeLayer(ref);osm.addTo(map)}});base.addTo(map);ref.addTo(map);
+function place(ll,t,cls,anchor){L.marker(ll,{interactive:false,keyboard:false,zIndexOffset:-1000,icon:L.divIcon({className:'',iconSize:[0,0],iconAnchor:anchor,
+  html:`<div class="place ${cls}"><i></i><span>${t}</span></div>`})}).addTo(map)}
+place([37.4936,-121.9446],'Tesla Fremont Factory','f',[5,6]);
+place(SCHOOL,'Lila Bringhurst Elementary','l',[0,6]);
+place([37.50124,-121.94300],'Innovation','',[5,22]);
+function fmtT(t){return new Date(t*1000).toLocaleString('en-US',{timeZone:'America/Los_Angeles',weekday:'short',hour:'numeric',minute:'2-digit'})}
+function spark(series,w,h,opt={}){
+  if(!series||series.length<2)return`<div style="font-size:11px;color:#9ca3af;padding:6px 0">No history yet</div>`;
+  const t0=series[0][0],t1=series[series.length-1][0],mx=Math.max(opt.min||100,...series.map(p=>p[1]));const ymax=Math.ceil(mx/50)*50;
+  const pl=opt.pl||0,pb=opt.pb||0,pt=opt.pt||2;const X=t=>pl+(t-t0)/(t1-t0)*(w-pl-2),Y=a=>pt+(1-Math.min(a,ymax)/ymax)*(h-pt-pb);
+  let s='';const id='g'+Math.random().toString(36).slice(2,7);
+  s+=`<defs><linearGradient id="${id}" x1="0" y1="${Y(0)}" x2="0" y2="${Y(ymax)}" gradientUnits="userSpaceOnUse">`+STOPS.filter(x=>x[0]<=ymax+50).map(([a])=>`<stop offset="${Math.min(1,a/ymax)}" stop-color="${col(a)}"/>`).join('')+`</linearGradient></defs>`;
+  for(let v=50;v<ymax;v+=50)s+=`<line x1="${pl}" x2="${w-2}" y1="${Y(v)}" y2="${Y(v)}" stroke="#e5e7eb" stroke-dasharray="3 3"/>`;
+  if(opt.axis){for(let v=0;v<=ymax;v+=50)s+=`<text x="${pl-5}" y="${Y(v)+3.5}" font-size="10" fill="#9ca3af" text-anchor="end">${v}</text>`;
+    const d=new Date(t0*1000);const fmt=new Intl.DateTimeFormat('en-US',{timeZone:'America/Los_Angeles',hour:'numeric',hourCycle:'h23'});
+    for(let t=Math.ceil(t0/3600)*3600;t<=t1;t+=3600){if(+fmt.format(new Date(t*1000))%24===0){s+=`<line x1="${X(t)}" x2="${X(t)}" y1="${pt}" y2="${h-pb}" stroke="#e5e7eb"/><text x="${X(t)+4}" y="${h-3}" font-size="10" fill="#9ca3af">${new Date(t*1000).toLocaleDateString('en-US',{timeZone:'America/Los_Angeles',weekday:'short',month:'short',day:'numeric'})}</text>`}}}
+  const pts=series.map(p=>`${X(p[0]).toFixed(1)},${Y(p[1]).toFixed(1)}`).join(' ');
+  s+=`<polygon points="${X(t0)},${Y(0)} ${pts} ${X(t1)},${Y(0)}" fill="url(#${id})" opacity=".28"/><polyline points="${pts}" fill="none" stroke="url(#${id})" stroke-width="${opt.sw||1.8}" stroke-linejoin="round"/>`;
+  s+=`<line x1="${pl}" x2="${w-2}" y1="${Y(0)}" y2="${Y(0)}" stroke="#d1d5db"/>`;
+  if(opt.peak){const pk=series.reduce((a,b)=>b[1]>a[1]?b:a);s+=`<circle cx="${X(pk[0])}" cy="${Y(pk[1])}" r="3.5" fill="#111827" stroke="#fff" stroke-width="1.5"/>`}
+  return`<svg width="${w}" height="${h}" viewBox="0 0 ${w} ${h}" style="display:block;overflow:visible">${s}</svg>`}
+function card(s,sw=276){
+  const a=s.aqi[W],c=cat(a??0),fg=ink(a);const ser=HIST&&HIST.series[s.id];
+  const pk=ser&&ser.length?ser.reduce((x,y)=>y[1]>x[1]?y:x):null;
+  const hrs=ser&&ser.length?Math.round((ser[ser.length-1][0]-ser[0][0])/3600):0;
+  return`<div class="ch" style="background:${col(a)};color:${fg}"><div class="nm">${s.name}${s.key?' ★':''}</div>
+   <div class="ds">${s.km_school<1?Math.round(s.km_school*1000)+' m':s.km_school.toFixed(1)+' km'} from Lila Bringhurst Elementary${s.key?' · nearest sensor to the school & Innovation':''}</div>
+   <div class="row"><div class="big">${a??'–'}</div><div class="ct"><small>${{'10minute':'NOW · 10-MIN AVG','60minute':'1-HOUR AVG','24hour':'24-HOUR AVG'}[W]}</small>${c[1]}</div></div><div class="msg">${c[3]}</div></div>
+   <div class="cb"><div class="chips">${[['10minute','10 Min'],['30minute','30 Min'],['60minute','1 hr'],['6hour','6 hr'],['24hour','1 Day'],['1week','Week']].map(([k,l])=>
+     `<div class="chip" style="background:${col(s.aqi[k])};color:${ink(s.aqi[k])}"><small>${l}</small><b>${s.aqi[k]??'–'}</b></div>`).join('')}</div>
+   <div class="spk"><div class="t"><span>Last ${hrs||72} h (${s.key?'10-min':'hourly'} AQI)</span><span>${pk?'Peak '+pk[1]+' · '+fmtT(pk[0]):''}</span></div>${spark(ser,sw,s.key?52:44,{peak:1})}</div></div>`}
+function render(){
+  if(!DATA)return;
+  document.getElementById('upd').innerHTML='Updated '+DATA.updated_pt+'<span class=r> · refreshes every 20 min</span>';
+  document.querySelectorAll('#seg button').forEach(b=>b.classList.toggle('on',b.dataset.w===W));
+  const k=DATA.sensors.find(s=>s.id===KEY);
+  if(k){const a=k.aqi[W],n=document.getElementById('pilln');n.textContent=a??'–';n.style.background=col(a);n.style.color=ink(a);
+    document.getElementById('pilll').textContent=WL[W]+' AQI · '+(a==null?'':cat(a)[1])}
+  DATA.sensors.forEach(s=>{
+    const a=s.aqi[W],z=s.key?46:36;
+    const icon=L.divIcon({className:'',iconSize:[z,z],iconAnchor:[z/2,z/2],popupAnchor:[0,-z/2],
+      html:`<div class="m${s.key?' key':''}${a==null?' na':''}" style="background:${col(a)};color:${ink(a)}">${a??'–'}</div>`});
+    let m=markers[s.id];
+    if(!m){m=markers[s.id]=L.marker([s.lat,s.lon],{icon,zIndexOffset:s.key?1000:0,riseOnHover:true}).addTo(map);
+      m.bindPopup('',{className:'card',maxWidth:300,minWidth:300,autoPanPaddingTopLeft:[20,150],autoPanPaddingBottomRight:[20,90],offset:[0,-2]});
+      m.on('mouseover',()=>{if(MOB())return;clearTimeout(hoverT);if(!m.isPopupOpen())m.openPopup()});
+      m.on('mouseout',()=>{if(MOB())return;hoverT=setTimeout(()=>{if(!m._pinned)m.closePopup()},350)});
+      m.on('click',()=>{if(MOB()){m.closePopup();show(s.id)}else{m._pinned=true;m.openPopup()}});
+      m.on('popupopen',e=>{openId=s.id;const el=e.popup.getElement();el.onmouseenter=()=>clearTimeout(hoverT);el.onmouseleave=()=>{if(!m._pinned)hoverT=setTimeout(()=>m.closePopup(),350)}});
+      m.on('popupclose',()=>{m._pinned=false;if(openId===s.id)openId=null});
+    }else m.setIcon(icon);
+    m.setPopupContent(card(s));
+  });
+  if(dockId)show(dockId);
+  drawChart();
+}
+function drawChart(){
+  const ser=HIST&&HIST.series[KEY];const svg=document.getElementById('chart');if(!svg||!document.getElementById('sheet').classList.contains('open'))return;
+  const w=svg.clientWidth||600,h=svg.clientHeight||140;
+  svg.outerHTML=`<svg id="chart">${spark(ser,w,h,{axis:1,pl:26,pb:16,pt:8,sw:2,peak:1}).replace(/^<svg[^>]*>|<\/svg>$/g,'')}</svg>`;
+  const s2=document.getElementById('chart');s2.setAttribute('viewBox',`0 0 ${w} ${h}`);
+}
+function peakText(){const ser=HIST&&HIST.series[KEY];if(!ser||!ser.length)return;const pk=ser.reduce((x,y)=>y[1]>x[1]?y:x);
+  document.getElementById('pk').innerHTML=`Peak <b style="color:#111827">${pk[1]}</b> · ${fmtT(pk[0])}`}
+async function load(first){
+  const q='?t='+Date.now();
+  try{const[d,h]=await Promise.all([fetch('data.json'+q).then(r=>r.json()),fetch('history.json'+q).then(r=>r.json()).catch(()=>null)]);DATA=d;if(h)HIST=h}
+  catch(e){document.getElementById('upd').textContent='Could not load data, retrying…';return}
+  render();peakText();
+  if(first){
+    const b=L.latLngBounds(DATA.sensors.map(s=>[s.lat,s.lon]).concat([[37.4936,-121.9446]]));
+    const mob=innerWidth<640;map.fitBounds(b,{paddingTopLeft:[mob?140:190,mob?150:110],paddingBottomRight:[mob?50:60,mob?90:innerWidth>=900?60:200]});
+    const o=+P.get('open');if(o&&markers[o]){if(MOB())show(o);else setTimeout(()=>{markers[o]._pinned=true;markers[o].openPopup()},300)}
+  }else if(openId&&markers[openId])markers[openId].getPopup().update();
+}
+document.getElementById('seg').onclick=e=>{const w=e.target.dataset&&e.target.dataset.w;if(w){W=w;render()}};
+document.getElementById('pill').onclick=()=>{const m=markers[KEY];if(!m)return;if(MOB())show(KEY);else{m._pinned=true;m.openPopup()}};
+map.on('click',()=>{if(dockId)hide()});
+const sheet=document.getElementById('sheet');
+if(P.get('sheet')==='open'||(P.get('sheet')!=='closed'&&innerWidth>=640))sheet.classList.add('open');
+document.getElementById('sh').onclick=()=>{sheet.classList.toggle('open');drawChart()};
+addEventListener('resize',()=>drawChart());
+load(true);setInterval(load,5*60*1000);
+document.addEventListener('visibilitychange',()=>{if(!document.hidden)load()});
+</script>
+</body>
+</html>

@@ -172,7 +172,7 @@ function card(s,sw=276){
    <div class="spk"><div class="t"><span>Last ${hrs||72} h (${s.key?'10-min':'hourly'} AQI)</span><span>${pk?'Peak '+pk[1]+' · '+fmtT(pk[0]):''}</span></div>${spark(ser,sw,s.key?52:44,{peak:1})}</div></div>`}
 function render(){
   if(!DATA)return;
-  document.getElementById('upd').innerHTML='Updated '+DATA.updated_pt+'<span class=r> · refreshes every 20 min</span>';
+  document.getElementById('upd').innerHTML='Updated '+DATA.updated_pt+'<span class=r> · refreshes every '+(DATA.interval_minutes||20)+' min</span>';
   document.querySelectorAll('#seg button').forEach(b=>b.classList.toggle('on',b.dataset.w===W));
   const k=DATA.sensors.find(s=>s.id===KEY);
   if(k){const a=k.aqi[W],n=document.getElementById('pilln');n.textContent=a??'–';n.style.background=col(a);n.style.color=ink(a);

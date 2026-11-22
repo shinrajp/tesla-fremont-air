@@ -17,7 +17,7 @@
 /* top bar */
 #top{position:fixed;z-index:1000;top:calc(12px + env(safe-area-inset-top));left:12px;right:12px;display:flex;align-items:center;gap:12px;padding:10px 12px 10px 16px;max-width:760px}
 #top h1{font-size:17px;line-height:1.15;margin:0;font-weight:700;letter-spacing:-.01em;white-space:nowrap}
-#top .sub{font-size:12px;color:var(--mut);margin-top:2px;white-space:nowrap}
+#top .sub{font-size:12px;color:var(--mut);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 #top .grow{flex:1;min-width:0}
 #pill{display:flex;align-items:center;gap:8px;padding:5px 6px 5px 12px;border-radius:999px;background:#f3f4f6;cursor:pointer;border:0;font:inherit;color:inherit}
 #pill .lab{font-size:11px;line-height:1.15;text-align:right;color:#374151}
@@ -170,9 +170,13 @@ function card(s,sw=276){
    <div class="cb"><div class="chips">${[['10minute','10 Min'],['30minute','30 Min'],['60minute','1 hr'],['6hour','6 hr'],['24hour','1 Day'],['1week','Week']].map(([k,l])=>
      `<div class="chip" style="background:${col(s.aqi[k])};color:${ink(s.aqi[k])}"><small>${l}</small><b>${s.aqi[k]??'–'}</b></div>`).join('')}</div>
    <div class="spk"><div class="t"><span>Last ${hrs||72} h (${s.key?'10-min':'hourly'} AQI)</span><span>${pk?'Peak '+pk[1]+' · '+fmtT(pk[0]):''}</span></div>${spark(ser,sw,s.key?52:44,{peak:1})}</div></div>`}
+function paceText(){const p=DATA.pace||{},m=p.minutes||DATA.interval_minutes||20;
+  if(p.mode!=='auto')return 'refreshes every '+m+' min';
+  const r=(p.reason||'').replace(/\s*\(score[^)]*\)/,'').replace(/^confirm burst.*/,'confirming a rise');
+  return 'smart refresh: every '+m+' min'+(r?' ('+r+')':'')}
 function render(){
   if(!DATA)return;
-  document.getElementById('upd').innerHTML='Updated '+DATA.updated_pt+'<span class=r> · refreshes every '+(DATA.interval_minutes||20)+' min</span>';
+  document.getElementById('upd').innerHTML='Updated '+DATA.updated_pt+'<span class=r> · '+paceText()+'</span>';
   document.querySelectorAll('#seg button').forEach(b=>b.classList.toggle('on',b.dataset.w===W));
   const k=DATA.sensors.find(s=>s.id===KEY);
   if(k){const a=k.aqi[W],n=document.getElementById('pilln');n.textContent=a??'–';n.style.background=col(a);n.style.color=ink(a);

@@ -171,6 +171,7 @@ function card(s,sw=276){
      `<div class="chip" style="background:${col(s.aqi[k])};color:${ink(s.aqi[k])}"><small>${l}</small><b>${s.aqi[k]??'–'}</b></div>`).join('')}</div>
    <div class="spk"><div class="t"><span>Last ${hrs||72} h (${s.key?'10-min':'hourly'} AQI)</span><span>${pk?'Peak '+pk[1]+' · '+fmtT(pk[0]):''}</span></div>${spark(ser,sw,s.key?52:44,{peak:1})}</div></div>`}
 function paceText(){const p=DATA.pace||{},m=p.minutes||DATA.interval_minutes||20;
+  if(p.mode==='paused')return 'tracking paused'+(p.since_pt?' since '+p.since_pt:'')+'; readings frozen';
   if(p.mode!=='auto')return 'refreshes every '+m+' min';
   const r=(p.reason||'').replace(/\s*\(score[^)]*\)/,'').replace(/^confirm burst.*/,'confirming a rise');
   return 'smart refresh: every '+m+' min'+(r?' ('+r+')':'')}

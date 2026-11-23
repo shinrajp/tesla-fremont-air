@@ -93,7 +93,8 @@ body.docked #sheet{display:none}
 #leg .tk{display:flex;justify-content:space-between;font-size:9.5px;color:var(--mut);font-variant-numeric:tabular-nums}
 #sb{display:none;padding:0 10px 10px}
 #sheet.open #sb{display:block}
-#chart{width:100%;height:min(150px,16vh);display:block}
+#evchart{position:relative;width:100%;height:min(210px,30vh);touch-action:none;-webkit-user-select:none;user-select:none;cursor:crosshair}
+#evchart #chart,#chart{width:100%;height:100%;display:block;overflow:visible}
 #bursts{margin-top:10px;padding:8px 4px 0;border-top:1px solid var(--bd)}
 #bursts h3{margin:0 0 4px;font-size:13px;font-weight:700}
 #bursts .empty,#bursts p{margin:0;font-size:12px;color:var(--mut);line-height:1.4}
@@ -123,9 +124,10 @@ body.docked #sheet{display:none}
 }
 @media (min-width:2000px){#top{zoom:1.4}#sheet{zoom:1.4}.card .leaflet-popup-content-wrapper{zoom:1.35}}
 
-#sheet{display:flex;flex-direction:column;max-height:min(72vh,640px)}
+#sheet{display:flex;flex-direction:column;max-height:min(80vh,760px)}
 #sb{overflow:auto;-webkit-overflow-scrolling:touch;padding:0 12px 12px;overscroll-behavior:contain}
-#chart{width:100%;height:min(160px,22vh);display:block}
+#evchart{position:relative;width:100%;height:min(220px,32vh);touch-action:none;-webkit-user-select:none;user-select:none;cursor:crosshair}
+#evchart #chart,#chart{width:100%;height:100%;display:block;overflow:visible}
 .block{margin-top:12px;padding-top:10px;border-top:1px solid var(--bd)}
 .block h3{margin:0 0 6px;font-size:13.5px;font-weight:750;letter-spacing:-.01em}
 .block p,.block li{font-size:12.5px;line-height:1.45;color:#374151;margin:0 0 6px}
@@ -152,8 +154,37 @@ body.docked #sheet{display:none}
 .wind-arrow{width:36px;height:36px;display:flex;align-items:center;justify-content:center;filter:drop-shadow(0 1px 2px rgba(0,0,0,.35))}
 .wind-arrow i{width:0;height:0;border-left:7px solid transparent;border-right:7px solid transparent;border-bottom:22px solid #14532d}
 @media (max-width:640px){
-  #sheet{max-height:min(68vh,580px)}
+  #sheet{max-height:min(76vh,680px)}
   #sh .tt{font-size:12px}
+}
+
+.evreadout{font-size:12px;line-height:1.4;color:#111827;background:#f8fafc;border:1px solid var(--bd);border-radius:10px;padding:8px 10px;margin:0 0 8px}
+.evreadout .when{font-weight:700}
+.evreadout .vals{font-variant-numeric:tabular-nums;margin-top:2px;color:#374151}
+.evreadout .factors{color:#374151;margin-top:3px;font-size:11.5px}
+#evhair{position:absolute;top:0;bottom:0;width:0;border-left:1px solid rgba(17,24,39,.6);pointer-events:none;z-index:2}
+.evtip{position:absolute;z-index:3;pointer-events:none;background:rgba(17,24,39,.94);color:#fff;border-radius:10px;padding:7px 9px;font-size:11.5px;line-height:1.35;width:max-content;max-width:230px;box-shadow:0 4px 16px rgba(0,0,0,.25);white-space:normal}
+.evtip .when{font-weight:700}
+.evtip b{font-variant-numeric:tabular-nums}
+#evnote{margin:6px 0 0}
+#spikes{margin-top:10px}
+#spikes h3{margin:0 0 4px}
+#spikes h4{margin:10px 0 4px;font-size:12.5px;font-weight:750}
+#spikes .day:first-of-type h4{margin-top:6px}
+#spikes .ep{display:block;width:100%;text-align:left;border:1px solid var(--bd);background:#fff;border-radius:10px;padding:8px 10px;margin:0 0 6px;cursor:pointer;font:inherit;color:inherit}
+#spikes .ep:hover,#spikes .ep.on{border-color:#111827;background:#f9fafb;box-shadow:0 0 0 2px rgba(17,24,39,.08)}
+#spikes .ep .head{display:flex;flex-wrap:wrap;align-items:center;gap:4px 6px;font-weight:650;font-size:12.5px;color:#111827}
+#spikes .ep .meta{font-size:11.5px;color:#4b5563;margin-top:3px;font-variant-numeric:tabular-nums}
+#spikes .ep .factors{font-size:11.5px;color:#374151;margin-top:3px}
+#spikes .empty{font-size:12px;color:var(--mut);margin:0 0 6px}
+.badge{display:inline-block;font:700 10px var(--font);padding:1px 6px;border-radius:999px;letter-spacing:.02em;text-transform:uppercase;vertical-align:middle}
+.badge.overnight{background:#1e3a5f;color:#fff}
+.badge.localized{background:#fef3c7;color:#92400e}
+#evchart .evpeak{cursor:pointer}
+#evchart .evpeak.on{stroke:#111827;stroke-width:2.5}
+@media (max-width:640px){
+  #sheet{max-height:min(76vh,680px)}
+  #evchart{height:min(200px,28vh)}
 }
 </style>
 </head>
@@ -183,8 +214,19 @@ body.docked #sheet{display:none}
     <div id="nowbox" class="block" style="border-top:0;margin-top:0;padding-top:4px"></div>
     <div class="block" id="evblock">
       <h3>Evidence · last 7 days</h3>
-      <p class="muted" id="evcap">School-area sensor, raw 10-minute AQI. Green shading marks hours when the wind was blowing from the facility toward the school. Shading does not mean the facility caused a reading.</p>
-      <svg id="chart"></svg>
+      <p class="muted" id="evcap">School-area sensor, 10-minute raw AQI. Hover or drag for a reading at any time. Light gray bands are overnight hours (10 PM–6 AM PT). Green shading marks hours when the wind was blowing from the facility toward the school.</p>
+      <div id="evreadout" class="evreadout" hidden></div>
+      <div id="evchart" role="img" aria-label="Seven-day school-area AQI chart">
+        <svg id="chart"></svg>
+        <div id="evhair" hidden></div>
+        <div id="evtip" class="evtip" hidden></div>
+      </div>
+      <p class="muted" id="evnote">Possible factors are automated hints from wind, time of day, and how this sensor compares with others. They are not a finding that the facility or any other source caused a reading.</p>
+      <div id="spikes">
+        <h3>Daily spike highlights</h3>
+        <p class="muted" id="spikedef">A suspicious spike is a 10-minute AQI of 76 or higher, or a jump of 35 or more above the prior 1-hour level. Consecutive readings are grouped as one episode.</p>
+        <div id="spikelist"></div>
+      </div>
     </div>
     <div id="news" class="block"></div>
     <div id="act" class="block"></div>
@@ -242,6 +284,31 @@ function renderWindArrow(){
   windMark=L.marker(PLANT,{interactive:false,keyboard:false,zIndexOffset:500,icon:L.divIcon({className:'',iconSize:[36,36],iconAnchor:[18,30],html})}).addTo(map);
 }
 function fmtT(t){return new Date(t*1000).toLocaleString('en-US',{timeZone:'America/Los_Angeles',weekday:'short',hour:'numeric',minute:'2-digit'})}
+function ptParts(t){
+  const p=new Intl.DateTimeFormat('en-US',{timeZone:'America/Los_Angeles',weekday:'short',month:'short',day:'numeric',year:'numeric',hour:'numeric',minute:'2-digit',hourCycle:'h23'}).formatToParts(new Date(t*1000));
+  const g=n=>(p.find(x=>x.type===n)||{}).value;
+  return {weekday:g('weekday'),month:g('month'),day:g('day'),year:g('year'),hour:+g('hour')%24,minute:g('minute')};
+}
+function fmtFull(t){
+  const d=new Date(t*1000);
+  const p=new Intl.DateTimeFormat('en-US',{timeZone:'America/Los_Angeles',weekday:'short',month:'short',day:'numeric',year:'numeric',hour:'numeric',minute:'2-digit'}).formatToParts(d);
+  const g=n=>(p.find(x=>x.type===n)||{}).value;
+  return `${g('weekday')}, ${g('month')} ${g('day')}, ${g('year')}, ${g('hour')}:${g('minute')} ${g('dayPeriod')} PT`;
+}
+function fmtShort(t){
+  const p=new Intl.DateTimeFormat('en-US',{timeZone:'America/Los_Angeles',hour:'numeric',minute:'2-digit'}).formatToParts(new Date(t*1000));
+  const g=n=>(p.find(x=>x.type===n)||{}).value;
+  return `${g('hour')}:${g('minute')} ${g('dayPeriod')}`;
+}
+function sameDay(a,b){
+  const A=ptParts(a),B=ptParts(b);
+  return A.year===B.year&&A.month===B.month&&A.day===B.day;
+}
+function spanLabel(e){
+  if(e.start===e.end) return fmtShort(e.start);
+  if(sameDay(e.start,e.end)) return fmtShort(e.start)+'–'+fmtShort(e.end);
+  return fmtShort(e.start)+'–'+fmtShort(e.end)+' ('+ptParts(e.end).month+' '+ptParts(e.end).day+')';
+}
 function spark(series,w,h,opt={}){
   if(!series||series.length<2)return`<div style="font-size:11px;color:#9ca3af;padding:6px 0">No history yet</div>`;
   const t0=series[0][0],t1=series[series.length-1][0],mx=Math.max(opt.min||100,...series.map(p=>p[1]));const ymax=Math.ceil(mx/50)*50;
@@ -403,14 +470,204 @@ function render(){
   renderAct();
   renderWhy();
   renderBursts();
+  renderSpikes();
   drawChart();
 }
-function drawChart(){
-  const ser=HIST&&HIST.series&&HIST.series[KEY];const svg=document.getElementById('chart');if(!svg||!document.getElementById('sheet').classList.contains('open'))return;
-  const w=svg.clientWidth||600,h=svg.clientHeight||140;
-  svg.outerHTML=`<svg id="chart">${spark(ser,w,h,{axis:1,pl:26,pb:16,pt:8,sw:2,peak:1,wind:(DATA&&DATA.wind_series)||[]}).replace(/^<svg[^>]*>|<\/svg>$/g,'')}</svg>`;
-  const s2=document.getElementById('chart');if(s2)s2.setAttribute('viewBox',`0 0 ${w} ${h}`);
+let EV={pts:[],t0:0,t1:0,X:null,Y:null,ymax:100,w:0,h:0,pl:26,pt:8,pb:16,avg:null,active:null,lock:false,pending:null,spikes:[]};
+function evPoints(){
+  if(HIST&&HIST.evidence&&HIST.evidence.points&&HIST.evidence.points.length) return HIST.evidence.points;
+  const ser=HIST&&HIST.series&&HIST.series[KEY];
+  return (ser||[]).map(([t,aqi])=>({t,aqi}));
 }
+function evSpikes(){
+  const ev=HIST&&HIST.evidence;
+  if(ev&&ev.spikes&&ev.spikes.days) return ev.spikes;
+  return {days:[],definition:(document.getElementById('spikedef')||{}).textContent};
+}
+function nearestT(t){const pts=EV.pts;if(!pts.length)return -1;let best=0,bd=1e15;for(let i=0;i<pts.length;i++){const d=Math.abs(pts[i].t-t);if(d<bd){bd=d;best=i}}return best}
+function nearestX(x){const pts=EV.pts;if(!pts.length||!EV.X)return -1;let best=0,bd=1e15;for(let i=0;i<pts.length;i++){const d=Math.abs(EV.X(pts[i].t)-x);if(d<bd){bd=d;best=i}}return best}
+function tipHTML(p,compact){
+  if(!p)return '';
+  const epa=p.epa==null?'':' · EPA-corrected '+p.epa;
+  const med=p.median==null?'':'Others’ median '+p.median;
+  const wind=p.mph!=null?('Wind '+(p.calm?'calm, ':'')+p.mph+' mph'+(p.from?(' from '+p.from):'')):'';
+  const bits=[med,wind].filter(Boolean).join(' · ');
+  const fac=p.factors||'';
+  if(compact){
+    return `<div class="when">${fmtFull(p.t)}</div><div>Raw AQI <b>${p.aqi}</b>${epa}</div>${bits?`<div>${bits}</div>`:''}${fac?`<div>${fac}</div>`:''}`;
+  }
+  return `<div class="when">${fmtFull(p.t)}</div><div class="vals">Raw AQI <b>${p.aqi}</b>${epa}${bits?(' · '+bits):''}</div>${fac?`<div class="factors">${fac}</div>`:''}`;
+}
+function hideTip(force){
+  if(EV.lock&&!force)return;
+  EV.active=null;EV.lock=false;
+  const tip=document.getElementById('evtip'),hair=document.getElementById('evhair'),ro=document.getElementById('evreadout');
+  if(tip)tip.hidden=true;if(hair)hair.hidden=true;if(ro)ro.hidden=true;
+  document.querySelectorAll('#chart .evpeak.on').forEach(el=>el.classList.remove('on'));
+  document.querySelectorAll('#spikes .ep.on').forEach(el=>el.classList.remove('on'));
+}
+function showTip(i,fromList){
+  const p=EV.pts[i];if(!p||!EV.X)return;
+  EV.active=p.t;EV.lock=!!fromList;
+  const tip=document.getElementById('evtip'),hair=document.getElementById('evhair'),ro=document.getElementById('evreadout'),svg=document.getElementById('chart'),box=document.getElementById('evchart');
+  if(!tip||!hair||!svg||!box)return;
+  const rec=svg.getBoundingClientRect(),br=box.getBoundingClientRect();
+  const sx=rec.width/EV.w,sy=rec.height/EV.h;
+  const px=rec.left-br.left+EV.X(p.t)*sx;
+  const py=rec.top-br.top+EV.Y(p.aqi)*sy;
+  hair.hidden=false;hair.style.left=px+'px';hair.style.top=(rec.top-br.top+EV.pt*sy)+'px';hair.style.bottom=(br.bottom-rec.bottom+EV.pb*sy)+'px';
+  tip.hidden=false;tip.innerHTML=tipHTML(p,true);
+  const tw=tip.offsetWidth,th=tip.offsetHeight;
+  let left=px, top=py-8-th;
+  if(left+tw>br.width-6) left=px-tw;
+  if(left<4) left=4;
+  if(top<2) top=py+10;
+  if(top+th>br.height-2) top=Math.max(2,br.height-th-2);
+  tip.style.left=left+'px';tip.style.top=top+'px';
+  if(ro){ro.hidden=false;ro.innerHTML=tipHTML(p,false)}
+  document.querySelectorAll('#chart .evpeak').forEach(el=>{
+    el.classList.toggle('on', +el.getAttribute('data-t')===p.t);
+  });
+  document.querySelectorAll('#spikes .ep').forEach(el=>{
+    const a=+el.getAttribute('data-t');
+    el.classList.toggle('on', Math.abs(a-p.t)<11*60);
+  });
+}
+function bindChart(){
+  const el=document.getElementById('evchart');
+  if(!el||el._bound)return;
+  el._bound=true;
+  const pos=e=>{
+    const ev=e.touches&&e.touches[0]?e.touches[0]:e;
+    const svg=document.getElementById('chart');if(!svg||!EV.X)return;
+    const rec=svg.getBoundingClientRect();
+    const x=(ev.clientX-rec.left)*(EV.w/rec.width);
+    showTip(nearestX(x),false);
+  };
+  const start=e=>{try{el.setPointerCapture(e.pointerId)}catch(x){} EV.lock=false; e.preventDefault(); pos(e)};
+  el.addEventListener('pointerdown',start);
+  el.addEventListener('pointermove',e=>{if(e.pointerType==='mouse'||el.hasPointerCapture(e.pointerId)){if(e.pointerType!=='mouse')e.preventDefault();pos(e)}});
+  el.addEventListener('pointerup',e=>{try{el.releasePointerCapture(e.pointerId)}catch(x){}});
+  el.addEventListener('pointerleave',e=>{if(e.pointerType==='mouse'&&!EV.lock) hideTip(true)});
+}
+function drawChart(){
+  const svg=document.getElementById('chart');
+  if(!svg||!document.getElementById('sheet').classList.contains('open'))return;
+  const pts=evPoints();
+  EV.pts=pts;
+  const wrap=document.getElementById('evchart');
+  const w=(wrap&&wrap.clientWidth)||svg.clientWidth||600;
+  const h=(wrap&&wrap.clientHeight)||svg.clientHeight||180;
+  const cap=document.getElementById('evcap');
+  const ev=HIST&&HIST.evidence;
+  if(cap&&ev&&ev.subtitle) cap.textContent=ev.subtitle+'. Hover or drag for a reading at any time. Light gray bands are overnight hours (10 PM–6 AM PT). Green shading marks hours when the wind was blowing from the facility toward the school.';
+  if(!pts||pts.length<2){svg.innerHTML='';return}
+  const t0=pts[0].t,t1=pts[pts.length-1].t;
+  const mx=Math.max(100,...pts.map(p=>p.aqi||0));
+  const ymax=Math.ceil(mx/50)*50;
+  const pl=26,pb=16,pt=8;
+  const X=t=>pl+(t-t0)/(t1-t0)*(w-pl-2);
+  const Y=a=>pt+(1-Math.min(a,ymax)/ymax)*(h-pt-pb);
+  EV.t0=t0;EV.t1=t1;EV.X=X;EV.Y=Y;EV.ymax=ymax;EV.w=w;EV.h=h;EV.pl=pl;EV.pt=pt;EV.pb=pb;
+  EV.avg=(ev&&ev.average!=null)?ev.average:Math.round(pts.reduce((s,p)=>s+p.aqi,0)/pts.length);
+  const gid='g'+Math.random().toString(36).slice(2,7);
+  let s='';
+  s+=`<defs><linearGradient id="${gid}" x1="0" y1="${Y(0)}" x2="0" y2="${Y(ymax)}" gradientUnits="userSpaceOnUse">`+STOPS.filter(x=>x[0]<=ymax+50).map(([a])=>`<stop offset="${Math.min(1,a/ymax)}" stop-color="${col(a)}"/>`).join('')+`</linearGradient></defs>`;
+  const bands=[[0,50,'#00e400'],[50,100,'#ffff00'],[100,150,'#ff7e00'],[150,200,'#ff0000'],[200,300,'#8f3f97'],[300,500,'#7e0023']];
+  for(const[a,b,c] of bands){if(a>=ymax)break;const y1=Y(Math.min(b,ymax)),y2=Y(a);s+=`<rect x="${pl}" y="${y1.toFixed(1)}" width="${(w-pl-2).toFixed(1)}" height="${Math.max(0,y2-y1).toFixed(1)}" fill="${c}" opacity=".09"/>`}
+  for(let t=Math.floor(t0/3600)*3600;t<t1;t+=3600){
+    const hr=ptParts(t).hour;
+    if(hr>=22||hr<6){
+      const x1=X(Math.max(t,t0)),x2=X(Math.min(t+3600,t1));
+      if(x2>x1) s+=`<rect x="${x1.toFixed(1)}" y="${pt}" width="${(x2-x1).toFixed(1)}" height="${h-pt-pb}" fill="#1e3a5f" opacity=".08"/>`;
+    }
+  }
+  const wind=(DATA&&DATA.wind_series)||[];
+  for(const row of wind){if(!row||!row[3])continue;const x1=X(Math.max(row[0],t0)),x2=X(Math.min(row[0]+3600,t1));if(x2<=x1)continue;s+=`<rect x="${x1.toFixed(1)}" y="${pt}" width="${(x2-x1).toFixed(1)}" height="${h-pt-pb}" fill="#14532d" opacity=".10"/>`}
+  for(let v=50;v<ymax;v+=50)s+=`<line x1="${pl}" x2="${w-2}" y1="${Y(v)}" y2="${Y(v)}" stroke="#e5e7eb" stroke-dasharray="3 3"/>`;
+  for(let v=0;v<=ymax;v+=50)s+=`<text x="${pl-5}" y="${Y(v)+3.5}" font-size="10" fill="#9ca3af" text-anchor="end">${v}</text>`;
+  const fmtH=new Intl.DateTimeFormat('en-US',{timeZone:'America/Los_Angeles',hour:'numeric',hourCycle:'h23'});
+  for(let t=Math.ceil(t0/3600)*3600;t<=t1;t+=3600){
+    if((+fmtH.format(new Date(t*1000)))%24===0){
+      s+=`<line x1="${X(t)}" x2="${X(t)}" y1="${pt}" y2="${h-pb}" stroke="#e5e7eb"/><text x="${X(t)+4}" y="${h-3}" font-size="10" fill="#9ca3af">${new Date(t*1000).toLocaleDateString('en-US',{timeZone:'America/Los_Angeles',weekday:'short',month:'short',day:'numeric'})}</text>`;
+    }
+  }
+  const line=pts.map(p=>`${X(p.t).toFixed(1)},${Y(p.aqi).toFixed(1)}`).join(' ');
+  s+=`<polygon points="${X(t0)},${Y(0)} ${line} ${X(t1)},${Y(0)}" fill="url(#${gid})" opacity=".28"/><polyline points="${line}" fill="none" stroke="url(#${gid})" stroke-width="2" stroke-linejoin="round"/>`;
+  s+=`<line x1="${pl}" x2="${w-2}" y1="${Y(0)}" y2="${Y(0)}" stroke="#d1d5db"/>`;
+  if(EV.avg!=null){
+    s+=`<line x1="${pl}" x2="${w-2}" y1="${Y(EV.avg)}" y2="${Y(EV.avg)}" stroke="#111827" stroke-width="1.1" stroke-dasharray="5 4" opacity=".55"/>`;
+    s+=`<text x="${w-4}" y="${Y(EV.avg)-4}" font-size="9.5" fill="#374151" text-anchor="end">avg ${EV.avg}</text>`;
+  }
+  const peakTs=new Set();
+  const days=(ev&&ev.spikes&&ev.spikes.days)||[];
+  for(const d of days){for(const e of (d.episodes||[])) peakTs.add(e.peak_t)}
+  for(const p of pts){
+    if(peakTs.has(p.t)) continue;
+    if(p.suspicious||p.burst){
+      s+=`<circle class="evdot" cx="${X(p.t).toFixed(1)}" cy="${Y(p.aqi).toFixed(1)}" r="2.2" fill="${col(p.aqi)}" stroke="#fff" stroke-width="0.8" opacity=".9"/>`;
+    }
+  }
+  for(const d of days){
+    for(const e of (d.episodes||[])){
+      const p=pts[nearestT(e.peak_t)];if(!p)continue;
+      const r=e.overnight?5.2:4.6;
+      const stroke=e.overnight?'#1e3a5f':'#fff';
+      s+=`<circle class="evpeak" data-t="${e.peak_t}" data-id="${e.id}" cx="${X(p.t).toFixed(1)}" cy="${Y(p.aqi).toFixed(1)}" r="${r}" fill="${col(p.aqi)}" stroke="${stroke}" stroke-width="1.8"/>`;
+    }
+  }
+  svg.setAttribute('viewBox',`0 0 ${w} ${h}`);
+  svg.setAttribute('width',w);
+  svg.setAttribute('height',h);
+  svg.setAttribute('style','display:block;overflow:visible');
+  svg.innerHTML=s;
+  bindChart();
+  if(EV.pending!=null){const tt=EV.pending;EV.pending=null;showEvidenceTip(tt)}
+  else if(EV.active!=null) showTip(nearestT(EV.active),EV.lock);
+}
+function renderSpikes(){
+  const box=document.getElementById('spikelist');if(!box)return;
+  const rec=evSpikes();
+  const def=document.getElementById('spikedef');
+  if(def&&rec.definition) def.textContent=rec.definition;
+  const days=rec.days||[];
+  if(!days.length){box.innerHTML='<p class="empty">Spike highlights will appear after the next data update.</p>';return}
+  box.innerHTML=days.map(day=>{
+    const items=day.episodes||[];
+    const body=items.length?items.map(e=>{
+      const badges=(e.overnight?'<span class="badge overnight">Overnight</span>':'')+(e.localized?'<span class="badge localized">Localized</span>':'');
+      const epa=e.peak_epa==null?'':` · EPA-corrected ${e.peak_epa}`;
+      const med=e.others_median==null?'':` · others’ median ${e.others_median}`;
+      const wf=e.wind_from_facility==null?'':` · wind from facility ${e.wind_from_facility?'yes':'no'}`;
+      return `<button type="button" class="ep" data-t="${e.peak_t}" data-id="${e.id}"><div class="head">${spanLabel(e)} · peak ${e.peak}${badges}</div><div class="meta">${e.peak_pt} · raw AQI ${e.peak}${epa}${med}${wf}</div>${e.factors?`<div class="factors">${e.factors}</div>`:''}</button>`;
+    }).join(''):'<p class="empty">No suspicious spikes this day.</p>';
+    return `<div class="day" data-date="${day.date}"><h4>${day.date_pt}</h4>${body}</div>`;
+  }).join('');
+  box.onclick=ev2=>{
+    const btn=ev2.target.closest('.ep');if(!btn)return;
+    showEvidenceTip(+btn.getAttribute('data-t'));
+  };
+}
+function showEvidenceTip(t){
+  if(t==null||t!==t)return;
+  const sheet=document.getElementById('sheet');
+  if(sheet&&!sheet.classList.contains('open')){sheet.classList.add('open')}
+  if(!EV.X){EV.pending=+t;drawChart();return}
+  const i=nearestT(+t);
+  if(i<0){EV.pending=+t;return}
+  showTip(i,true);
+  const chart=document.getElementById('evblock');
+  if(chart) chart.scrollIntoView({block:'nearest',behavior:'smooth'});
+  const item=document.querySelector('#spikes .ep.on');
+  if(item) item.scrollIntoView({block:'nearest',behavior:'smooth'});
+}
+window.showEvidenceTip=showEvidenceTip;
+function maybeTipFromURL(){
+  const raw=P.get('tip');if(!raw)return;
+  const t=+raw;
+  if(t) showEvidenceTip(t);
+}
+
 function peakText(){const ser=HIST&&HIST.series&&HIST.series[KEY];const el=document.getElementById('pk');if(!el)return;if(!ser||!ser.length){el.textContent='';return}const pk=ser.reduce((x,y)=>y[1]>x[1]?y:x);
   el.innerHTML=`Peak <b style="color:#111827">${pk[1]}</b> · ${fmtT(pk[0])}`}
 async function load(first){
@@ -437,7 +694,7 @@ const sheet=document.getElementById('sheet');
 if(P.get('sheet')==='open'||(P.get('sheet')!=='closed'&&innerWidth>=640))sheet.classList.add('open');
 document.getElementById('sh').onclick=()=>{sheet.classList.toggle('open');drawChart()};
 addEventListener('resize',()=>drawChart());
-load(true);setInterval(load,5*60*1000);
+load(true).then(()=>maybeTipFromURL());setInterval(load,5*60*1000);
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)load()});
 </script>
 </body>

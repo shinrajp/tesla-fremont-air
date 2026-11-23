@@ -93,7 +93,7 @@ body.docked #sheet{display:none}
 #leg .tk{display:flex;justify-content:space-between;font-size:9.5px;color:var(--mut);font-variant-numeric:tabular-nums}
 #sb{display:none;padding:0 10px 10px}
 #sheet.open #sb{display:block}
-#evchart{position:relative;width:100%;height:min(210px,30vh);touch-action:none;-webkit-user-select:none;user-select:none;cursor:crosshair}
+#evchart{position:relative;width:100%;height:min(210px,30vh);touch-action:pan-y;-webkit-user-select:none;user-select:none;cursor:crosshair}
 #evchart #chart,#chart{width:100%;height:100%;display:block;overflow:visible}
 #bursts{margin-top:10px;padding:8px 4px 0;border-top:1px solid var(--bd)}
 #bursts h3{margin:0 0 4px;font-size:13px;font-weight:700}
@@ -126,7 +126,7 @@ body.docked #sheet{display:none}
 
 #sheet{display:flex;flex-direction:column;max-height:min(80vh,760px)}
 #sb{overflow:auto;-webkit-overflow-scrolling:touch;padding:0 12px 12px;overscroll-behavior:contain}
-#evchart{position:relative;width:100%;height:min(220px,32vh);touch-action:none;-webkit-user-select:none;user-select:none;cursor:crosshair}
+#evchart{position:relative;width:100%;height:min(220px,32vh);touch-action:pan-y;-webkit-user-select:none;user-select:none;cursor:crosshair}
 #evchart #chart,#chart{width:100%;height:100%;display:block;overflow:visible}
 .block{margin-top:12px;padding-top:10px;border-top:1px solid var(--bd)}
 .block h3{margin:0 0 6px;font-size:13.5px;font-weight:750;letter-spacing:-.01em}
@@ -182,6 +182,18 @@ body.docked #sheet{display:none}
 .badge.localized{background:#fef3c7;color:#92400e}
 #evchart .evpeak{cursor:pointer}
 #evchart .evpeak.on{stroke:#111827;stroke-width:2.5}
+#evfollow{position:absolute;z-index:4;width:18px;height:18px;margin-left:-9px;margin-top:-9px;border-radius:50%;border:3px solid #fff;box-shadow:0 0 0 1.5px rgba(17,24,39,.45),0 2px 8px rgba(0,0,0,.35);pointer-events:none;background:#00e400}
+#evfollow[hidden]{display:none}
+#evdotlab{position:absolute;left:22px;top:50%;transform:translateY(-50%);background:rgba(17,24,39,.92);color:#fff;font:700 11px/1.2 var(--font);padding:3px 7px;border-radius:7px;white-space:nowrap;box-shadow:0 2px 8px rgba(0,0,0,.25);pointer-events:none}
+#evdotlab.left{left:auto;right:22px}
+#evdotlab[hidden]{display:none}
+.evtip{z-index:5}
+a.palink{color:#111827;font-weight:650;text-decoration:underline;text-underline-offset:2px}
+.evtip a.palink,.evdotlab a.palink{color:#fff}
+.evreadout a.palink{color:#111827}
+#evsensors{margin:6px 0 0;font-size:11.5px;color:var(--mut);line-height:1.45}
+#spikes .ep .src{margin-top:3px;font-size:11.5px}
+#evchart{overflow:visible}
 @media (max-width:640px){
   #sheet{max-height:min(76vh,680px)}
   #evchart{height:min(200px,28vh)}
@@ -219,9 +231,11 @@ body.docked #sheet{display:none}
       <div id="evchart" role="img" aria-label="Seven-day school-area AQI chart">
         <svg id="chart"></svg>
         <div id="evhair" hidden></div>
+        <div id="evfollow" hidden><span id="evdotlab" hidden></span></div>
         <div id="evtip" class="evtip" hidden></div>
       </div>
-      <p class="muted" id="evnote">Possible factors are automated hints from wind, time of day, and how this sensor compares with others. They are not a finding that the facility or any other source caused a reading.</p>
+      <p class="muted" id="evnote">Possible factors are automated hints from wind, time of day, and how this sensor compares with others. They are not a finding that the facility or any other source caused a reading. Hover or drag horizontally along the plot; the dot snaps to each 10-minute reading. On a phone, a vertical swipe still scrolls the page.</p>
+      <p class="muted" id="evsensors"></p>
       <div id="spikes">
         <h3>Daily spike highlights</h3>
         <p class="muted" id="spikedef">A suspicious spike is a 10-minute AQI of 76 or higher, or a jump of 35 or more above the prior 1-hour level. Consecutive readings are grouped as one episode.</p>
@@ -471,6 +485,7 @@ function render(){
   renderWhy();
   renderBursts();
   renderSpikes();
+  renderSensorNote();
   drawChart();
 }
 let EV={pts:[],t0:0,t1:0,X:null,Y:null,ymax:100,w:0,h:0,pl:26,pt:8,pb:16,avg:null,active:null,lock:false,pending:null,spikes:[]};
@@ -486,69 +501,170 @@ function evSpikes(){
 }
 function nearestT(t){const pts=EV.pts;if(!pts.length)return -1;let best=0,bd=1e15;for(let i=0;i<pts.length;i++){const d=Math.abs(pts[i].t-t);if(d<bd){bd=d;best=i}}return best}
 function nearestX(x){const pts=EV.pts;if(!pts.length||!EV.X)return -1;let best=0,bd=1e15;for(let i=0;i<pts.length;i++){const d=Math.abs(EV.X(pts[i].t)-x);if(d<bd){bd=d;best=i}}return best}
+function keySensor(){
+  return ((DATA&&DATA.sensors)||[]).find(s=>s.id===KEY||s.key)||{id:KEY,name:'1a1a_ambition'};
+}
+function paHref(id){return 'https://map.purpleair.com/?select='+id}
+function paLink(id,name){
+  const n=name||('sensor '+id);
+  return `<a class="palink" href="${paHref(id)}" target="_blank" rel="noopener">${n} (PurpleAir #${id})</a>`;
+}
 function tipHTML(p,compact){
   if(!p)return '';
+  const ks=keySensor();
+  const src=paLink(ks.id, ks.name);
   const epa=p.epa==null?'':' · EPA-corrected '+p.epa;
   const med=p.median==null?'':'Others’ median '+p.median;
   const wind=p.mph!=null?('Wind '+(p.calm?'calm, ':'')+p.mph+' mph'+(p.from?(' from '+p.from):'')):'';
   const bits=[med,wind].filter(Boolean).join(' · ');
   const fac=p.factors||'';
   if(compact){
-    return `<div class="when">${fmtFull(p.t)}</div><div>Raw AQI <b>${p.aqi}</b>${epa}</div>${bits?`<div>${bits}</div>`:''}${fac?`<div>${fac}</div>`:''}`;
+    return `<div class="when">${fmtFull(p.t)}</div><div class="src">${src}</div><div>Raw AQI <b>${p.aqi}</b>${epa}</div>${bits?`<div>${bits}</div>`:''}${fac?`<div>${fac}</div>`:''}`;
   }
-  return `<div class="when">${fmtFull(p.t)}</div><div class="vals">Raw AQI <b>${p.aqi}</b>${epa}${bits?(' · '+bits):''}</div>${fac?`<div class="factors">${fac}</div>`:''}`;
+  return `<div class="when">${fmtFull(p.t)}</div><div class="src">${src}</div><div class="vals">Raw AQI <b>${p.aqi}</b>${epa}${bits?(' · '+bits):''}</div>${fac?`<div class="factors">${fac}</div>`:''}`;
 }
-function hideTip(force){
-  if(EV.lock&&!force)return;
-  EV.active=null;EV.lock=false;
+function renderSensorNote(){
+  const el=document.getElementById('evsensors'); if(!el)return;
+  const sensors=(DATA&&DATA.sensors)||[];
+  const key=sensors.find(s=>s.id===KEY||s.key);
+  const others=sensors.filter(s=>!(s.id===KEY||s.key)).slice().sort((a,b)=>(a.km_facility??99)-(b.km_facility??99));
+  const keyBit=key?paLink(key.id,key.name):paLink(KEY,'1a1a_ambition');
+  const list=others.map(s=>{
+    const dist=s.km_facility==null?'':`${s.km_facility} km${s.bearing_compass?(' '+s.bearing_compass):''} of the facility`;
+    return `${s.name||('#'+s.id)}${dist?(' · '+dist):''}`;
+  }).join('; ');
+  el.innerHTML=`School-area sensor: ${keyBit}. Comparison sensors (distance from the Tesla Fremont facility): ${list||'other nearby PurpleAir sensors'}.`;
+}
+function placeFollow(p, opts){
+  const park=!!(opts&&opts.park);
   const tip=document.getElementById('evtip'),hair=document.getElementById('evhair'),ro=document.getElementById('evreadout');
-  if(tip)tip.hidden=true;if(hair)hair.hidden=true;if(ro)ro.hidden=true;
-  document.querySelectorAll('#chart .evpeak.on').forEach(el=>el.classList.remove('on'));
-  document.querySelectorAll('#spikes .ep.on').forEach(el=>el.classList.remove('on'));
-}
-function showTip(i,fromList){
-  const p=EV.pts[i];if(!p||!EV.X)return;
-  EV.active=p.t;EV.lock=!!fromList;
-  const tip=document.getElementById('evtip'),hair=document.getElementById('evhair'),ro=document.getElementById('evreadout'),svg=document.getElementById('chart'),box=document.getElementById('evchart');
-  if(!tip||!hair||!svg||!box)return;
+  const svg=document.getElementById('chart'),box=document.getElementById('evchart');
+  const dot=document.getElementById('evfollow'),lab=document.getElementById('evdotlab');
+  if(!svg||!box||!EV.X||!p)return;
   const rec=svg.getBoundingClientRect(),br=box.getBoundingClientRect();
+  if(!rec.width||!EV.w)return;
   const sx=rec.width/EV.w,sy=rec.height/EV.h;
   const px=rec.left-br.left+EV.X(p.t)*sx;
   const py=rec.top-br.top+EV.Y(p.aqi)*sy;
-  hair.hidden=false;hair.style.left=px+'px';hair.style.top=(rec.top-br.top+EV.pt*sy)+'px';hair.style.bottom=(br.bottom-rec.bottom+EV.pb*sy)+'px';
-  tip.hidden=false;tip.innerHTML=tipHTML(p,true);
-  const tw=tip.offsetWidth,th=tip.offsetHeight;
-  let left=px, top=py-8-th;
-  if(left+tw>br.width-6) left=px-tw;
-  if(left<4) left=4;
-  if(top<2) top=py+10;
-  if(top+th>br.height-2) top=Math.max(2,br.height-th-2);
-  tip.style.left=left+'px';tip.style.top=top+'px';
-  if(ro){ro.hidden=false;ro.innerHTML=tipHTML(p,false)}
+  if(dot){
+    dot.hidden=false;
+    dot.classList.toggle('parked', park);
+    dot.style.left=px+'px';
+    dot.style.top=py+'px';
+    dot.style.background=col(p.aqi);
+  }
+  if(lab){
+    if(park){
+      lab.hidden=false;
+      lab.textContent='Now · '+p.aqi+' · '+fmtShort(p.t);
+      lab.classList.toggle('left', px>br.width*0.62);
+    } else {
+      lab.hidden=true;
+    }
+  }
   document.querySelectorAll('#chart .evpeak').forEach(el=>{
     el.classList.toggle('on', +el.getAttribute('data-t')===p.t);
   });
+  if(park){
+    if(hair)hair.hidden=true;
+    if(tip)tip.hidden=true;
+    if(ro)ro.hidden=true;
+    document.querySelectorAll('#spikes .ep.on').forEach(el=>el.classList.remove('on'));
+    return;
+  }
+  if(hair){
+    hair.hidden=false;
+    hair.style.left=px+'px';
+    hair.style.top=(rec.top-br.top+EV.pt*sy)+'px';
+    hair.style.bottom=(br.bottom-rec.bottom+EV.pb*sy)+'px';
+  }
+  if(tip){
+    tip.hidden=false;
+    tip.innerHTML=tipHTML(p,true);
+    const tw=tip.offsetWidth,th=tip.offsetHeight,pad=6;
+    const roomRight=br.width-(px+12), roomLeft=px-12;
+    let left;
+    if(roomLeft>=tw && (roomLeft>=roomRight || roomRight<tw)) left=px-tw-12;
+    else left=px+12;
+    left=Math.max(pad, Math.min(left, br.width-tw-pad));
+    let top;
+    if(py-10-th>=pad) top=py-10-th;
+    else if(py+14+th<=br.height-pad) top=py+14;
+    else top=Math.max(pad, Math.min(py-th/2, br.height-th-pad));
+    top=Math.max(pad, Math.min(top, br.height-th-pad));
+    tip.style.left=left+'px';
+    tip.style.top=top+'px';
+  }
+  if(ro){ro.hidden=false;ro.innerHTML=tipHTML(p,false)}
   document.querySelectorAll('#spikes .ep').forEach(el=>{
     const a=+el.getAttribute('data-t');
     el.classList.toggle('on', Math.abs(a-p.t)<11*60);
+  });
+}
+function parkLatest(){
+  EV.lock=false;
+  if(!EV.pts.length||!EV.X)return;
+  const i=EV.pts.length-1;
+  EV.active=EV.pts[i].t;
+  placeFollow(EV.pts[i], {park:true});
+}
+function hideTip(force){
+  if(EV.lock&&!force)return;
+  parkLatest();
+}
+let _tipRaf=0,_tipI=0,_tipLock=false,_tipPark=false;
+function showTip(i,fromList,park){
+  if(i==null||i<0||!EV.pts[i])return;
+  _tipI=i; _tipLock=!!fromList; _tipPark=!!park;
+  if(_tipRaf) return;
+  _tipRaf=requestAnimationFrame(()=>{
+    _tipRaf=0;
+    const p=EV.pts[_tipI]; if(!p||!EV.X)return;
+    EV.active=p.t;
+    EV.lock=_tipLock && !_tipPark;
+    placeFollow(p, {park:_tipPark && !EV.lock});
   });
 }
 function bindChart(){
   const el=document.getElementById('evchart');
   if(!el||el._bound)return;
   el._bound=true;
+  const THRESH=8;
   const pos=e=>{
-    const ev=e.touches&&e.touches[0]?e.touches[0]:e;
+    const ev=(e.touches&&e.touches[0])||e;
     const svg=document.getElementById('chart');if(!svg||!EV.X)return;
     const rec=svg.getBoundingClientRect();
     const x=(ev.clientX-rec.left)*(EV.w/rec.width);
     showTip(nearestX(x),false);
   };
-  const start=e=>{try{el.setPointerCapture(e.pointerId)}catch(x){} EV.lock=false; e.preventDefault(); pos(e)};
-  el.addEventListener('pointerdown',start);
-  el.addEventListener('pointermove',e=>{if(e.pointerType==='mouse'||el.hasPointerCapture(e.pointerId)){if(e.pointerType!=='mouse')e.preventDefault();pos(e)}});
-  el.addEventListener('pointerup',e=>{try{el.releasePointerCapture(e.pointerId)}catch(x){}});
-  el.addEventListener('pointerleave',e=>{if(e.pointerType==='mouse'&&!EV.lock) hideTip(true)});
+  el.addEventListener('pointerdown',e=>{
+    EV._sx=e.clientX; EV._sy=e.clientY; EV._mode='pending'; EV._pid=e.pointerId;
+    if(e.pointerType==='mouse'){EV._mode='drag';EV.lock=false;pos(e)}
+  });
+  el.addEventListener('pointermove',e=>{
+    if(e.pointerType==='mouse'){pos(e);return}
+    if(EV._mode==='pending' && e.pointerId===EV._pid){
+      const dx=e.clientX-EV._sx, dy=e.clientY-EV._sy;
+      if(Math.abs(dx)<THRESH && Math.abs(dy)<THRESH) return;
+      if(Math.abs(dx)>=Math.abs(dy)){
+        EV._mode='drag'; EV.lock=false;
+        try{el.setPointerCapture(e.pointerId)}catch(x){}
+        e.preventDefault(); pos(e);
+      } else {
+        EV._mode='scroll';
+      }
+      return;
+    }
+    if(EV._mode==='drag'){e.preventDefault();pos(e)}
+  },{passive:false});
+  const end=e=>{
+    if(EV._mode==='drag'){try{el.releasePointerCapture(e.pointerId)}catch(x){}}
+    if(e.pointerType==='mouse') return;
+    EV._mode='idle';
+  };
+  el.addEventListener('pointerup',end);
+  el.addEventListener('pointercancel',e=>{end(e); if(!EV.lock) parkLatest()});
+  el.addEventListener('pointerleave',e=>{if(e.pointerType==='mouse'&&!EV.lock) parkLatest()});
 }
 function drawChart(){
   const svg=document.getElementById('chart');
@@ -623,7 +739,8 @@ function drawChart(){
   svg.innerHTML=s;
   bindChart();
   if(EV.pending!=null){const tt=EV.pending;EV.pending=null;showEvidenceTip(tt)}
-  else if(EV.active!=null) showTip(nearestT(EV.active),EV.lock);
+  else if(EV.lock && EV.active!=null) showTip(nearestT(EV.active),true);
+  else parkLatest();
 }
 function renderSpikes(){
   const box=document.getElementById('spikelist');if(!box)return;
@@ -639,13 +756,21 @@ function renderSpikes(){
       const epa=e.peak_epa==null?'':` · EPA-corrected ${e.peak_epa}`;
       const med=e.others_median==null?'':` · others’ median ${e.others_median}`;
       const wf=e.wind_from_facility==null?'':` · wind from facility ${e.wind_from_facility?'yes':'no'}`;
-      return `<button type="button" class="ep" data-t="${e.peak_t}" data-id="${e.id}"><div class="head">${spanLabel(e)} · peak ${e.peak}${badges}</div><div class="meta">${e.peak_pt} · raw AQI ${e.peak}${epa}${med}${wf}</div>${e.factors?`<div class="factors">${e.factors}</div>`:''}</button>`;
+      const ks=keySensor();
+      const src=`<div class="src">${paLink(ks.id,ks.name)}</div>`;
+      return `<div class="ep" role="button" tabindex="0" data-t="${e.peak_t}" data-id="${e.id}"><div class="head">${spanLabel(e)} · peak ${e.peak}${badges}</div><div class="meta">${e.peak_pt} · raw AQI ${e.peak}${epa}${med}${wf}</div>${src}${e.factors?`<div class="factors">${e.factors}</div>`:''}</div>`;
     }).join(''):'<p class="empty">No suspicious spikes this day.</p>';
     return `<div class="day" data-date="${day.date}"><h4>${day.date_pt}</h4>${body}</div>`;
   }).join('');
   box.onclick=ev2=>{
+    if(ev2.target.closest('a.palink')) return;
     const btn=ev2.target.closest('.ep');if(!btn)return;
     showEvidenceTip(+btn.getAttribute('data-t'));
+  };
+  box.onkeydown=ev2=>{
+    if(ev2.key!=='Enter'&&ev2.key!==' ')return;
+    const btn=ev2.target.closest('.ep');if(!btn)return;
+    ev2.preventDefault();showEvidenceTip(+btn.getAttribute('data-t'));
   };
 }
 function showEvidenceTip(t){
@@ -656,10 +781,11 @@ function showEvidenceTip(t){
   const i=nearestT(+t);
   if(i<0){EV.pending=+t;return}
   showTip(i,true);
-  const chart=document.getElementById('evblock');
-  if(chart) chart.scrollIntoView({block:'nearest',behavior:'smooth'});
+  const motion=P.get('tip')?'auto':'smooth';
+  const chart=document.getElementById('evchart')||document.getElementById('evblock');
+  if(chart) chart.scrollIntoView({block:'center',behavior:motion});
   const item=document.querySelector('#spikes .ep.on');
-  if(item) item.scrollIntoView({block:'nearest',behavior:'smooth'});
+  if(item) item.scrollIntoView({block:'nearest',behavior:motion});
 }
 window.showEvidenceTip=showEvidenceTip;
 function maybeTipFromURL(){

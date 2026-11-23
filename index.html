@@ -213,6 +213,23 @@ a.palink{color:#111827;font-weight:650;text-decoration:underline;text-underline-
 #sensorlist li:last-child{border-bottom:0}
 #methods p{margin:0 0 8px}
 #sh .tt{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+.spikefilt{display:flex;flex-wrap:wrap;align-items:center;gap:6px 8px;margin:8px 0}
+.spikefilt .tog{display:flex;align-items:center;gap:6px;font:650 12.5px var(--font);color:#111827}
+.filt-min{display:inline-flex;align-items:center;gap:4px;font:650 12px var(--font);color:#4b5563}
+.filt-min button,.chip, .sect-tools button{border:1px solid var(--bd);background:#fff;border-radius:999px;padding:5px 10px;font:650 12px var(--font);color:#374151;cursor:pointer;min-height:32px}
+.filt-min button.on,.chip[aria-pressed="true"]{background:#111827;color:#fff;border-color:#111827}
+.filt-min button:focus-visible,.chip:focus-visible,.sect-tools button:focus-visible,.tog input:focus-visible{outline:2px solid #111827;outline-offset:2px}
+.spikesum{background:#f8fafc;border:1px solid var(--bd);border-radius:12px;padding:10px 12px;font-size:12.5px;line-height:1.45;color:#111827;margin:0 0 10px}
+.daysum{font:500 12px var(--font);color:#4b5563;margin:2px 0 0;line-height:1.4}
+.sect-tools{display:flex;gap:6px;margin:0 0 8px}
+details.day, details.sect{border:1px solid var(--bd);border-radius:12px;padding:0;margin:0 0 8px;background:#fff}
+details.day>summary, details.sect>summary{cursor:pointer;list-style:none;padding:8px 12px;font:750 12.5px var(--font);color:#111827}
+details.day>summary::-webkit-details-marker, details.sect>summary::-webkit-details-marker{display:none}
+details.day>summary::before, details.sect>summary::before{content:'▸';display:inline-block;width:1em;color:#6b7280;margin-right:4px}
+details.day[open]>summary::before, details.sect[open]>summary::before{content:'▾'}
+details.day .day-body, details.sect .sect-body{padding:0 12px 8px}
+details.sect>summary{font-size:13.5px}
 </style>
 </head>
 <body>
@@ -261,6 +278,20 @@ a.palink{color:#111827;font-weight:650;text-decoration:underline;text-underline-
       <div id="spikes">
         <h3>Daily spike highlights</h3>
         <p class="muted" id="spikedef">A suspicious spike is a 10-minute AQI of 76 or higher, or a jump of 35 or more above the prior 1-hour level. Consecutive readings are grouped as one episode. Tap an episode to see it on the chart.</p>
+        <div id="spikefilt" class="spikefilt">
+          <label class="tog"><input type="checkbox" id="filt-sus" checked> Suspicious only</label>
+          <div class="filt-min" role="group" aria-label="AQI threshold">
+            <span>AQI ≥</span>
+            <button type="button" data-min="76" class="on" aria-pressed="true">76</button>
+            <button type="button" data-min="101" aria-pressed="false">101</button>
+            <button type="button" data-min="151" aria-pressed="false">151</button>
+          </div>
+          <button type="button" class="chip" id="filt-ovn" aria-pressed="false">Overnight</button>
+          <button type="button" class="chip" id="filt-loc" aria-pressed="false">Localized</button>
+        </div>
+        <p class="muted" id="filthint">“Suspicious only” also keeps official jump episodes (a rise of 35 or more) even if the peak is below the AQI threshold.</p>
+        <div id="spikesum" class="spikesum"></div>
+        <div class="sect-tools"><button type="button" id="spk-expand">Expand all</button><button type="button" id="spk-collapse">Collapse all</button></div>
         <div id="spikelist"></div>
       </div>
       <div id="bursts" class="block"></div>
@@ -269,14 +300,16 @@ a.palink{color:#111827;font-weight:650;text-decoration:underline;text-underline-
       <div id="news" class="block" style="border-top:0;margin-top:0;padding-top:4px"></div>
     </div>
     <div id="panel-details" class="panel" role="tabpanel" aria-labelledby="tab-details" hidden>
-      <div id="sensorlist" class="block" style="border-top:0;margin-top:0;padding-top:4px"></div>
-      <div id="methods" class="block">
-        <h3>How readings are shown</h3>
+      <div class="sect-tools"><button type="button" id="det-expand">Expand all</button><button type="button" id="det-collapse">Collapse all</button></div>
+      <details class="sect" id="sect-sensors" open><summary>Sensors</summary><div class="sect-body" id="sensorlist"></div></details>
+      <details class="sect" id="sect-methods" open><summary>How readings are shown</summary>
+        <div class="sect-body" id="methods">
         <p>Map numbers are <b>raw</b> PurpleAir readings (the same as the PurpleAir map’s raw view). Each sensor card also shows an <b>EPA-corrected</b> AQI, an official adjustment that often reads a bit lower. Alerts and group-post thresholds use the raw 1-hour value. 10-minute short bursts are flagged for review only and do not by themselves trigger a group post.</p>
         <p class="muted">WHO 2021 guideline (reference only): 15 µg/m³ 24-hour, 5 µg/m³ annual. Sources: PurpleAir.com public sensors; U.S. EPA PM2.5 AQI; wind from Open-Meteo. This page does not claim the facility caused a given reading.</p>
-      </div>
-      <div id="why" class="block"></div>
-      <div id="act" class="block"></div>
+        </div>
+      </details>
+      <details class="sect" id="sect-why"><summary>Why this page vs the PurpleAir map</summary><div class="sect-body" id="why"></div></details>
+      <details class="sect" id="sect-act"><summary>Timeline & take action</summary><div class="sect-body" id="act"></div></details>
     </div>
   </div>
 </div>
@@ -307,11 +340,9 @@ let DATA=null,HIST=null,markers={},openId=null,hoverT=null,legPick=null;
 const map=L.map('map',{zoomControl:false,attributionControl:true,zoomSnap:.5,maxZoom:16});
 L.control.zoom({position:'bottomright'}).addTo(map);
 map.attributionControl.setPrefix('Data: <a href="https://map.purpleair.com/" target=_blank rel="noopener">PurpleAir.com</a> public sensors (raw on map)');
-const osm=L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'© OpenStreetMap'});
 const ESRI='https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/';
 const base=L.tileLayer(ESRI+'World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}',{maxZoom:16,attribution:'© Esri, HERE, Garmin, OpenStreetMap'});
-const ref=L.tileLayer(ESRI+'World_Light_Gray_Reference/MapServer/tile/{z}/{y}/{x}',{maxZoom:16,pane:'overlayPane'});
-let tileErr=0;base.on('tileerror',()=>{if(++tileErr==4){map.removeLayer(base);map.removeLayer(ref);osm.addTo(map)}});base.addTo(map);ref.addTo(map);
+base.addTo(map);
 function place(ll,t,cls,anchor){L.marker(ll,{interactive:false,keyboard:false,zIndexOffset:-1000,icon:L.divIcon({className:'',iconSize:[0,0],iconAnchor:anchor,
   html:`<div class="place ${cls}"><i></i><span>${t}</span></div>`})}).addTo(map)}
 place([37.4936,-121.9446],'Tesla Fremont facility','f',[5,6]);
@@ -440,15 +471,13 @@ function renderAct(){
     const link=(it.url&&/^https?:/i.test(it.url))?` <a href="${esc(it.url)}" target="_blank" rel="noopener">Official page</a>`:'';
     return `<li><div class="when">${esc(it.when||'')}</div><div><b>${esc(it.title||'')}</b>${tbc}</div><p>${esc(it.detail||'')}${link}</p></li>`;
   }).join('');
-  box.innerHTML=`<h3>Timeline & take action</h3>
-    <p>If you smell an odor or see smoke or visible emissions, BAAQMD asks you to report it <b>while it is happening</b>. You can call <a href="tel:18003346367">1-800-334-6367</a> (1-800-334-ODOR) or use the online form. Reports can be made anonymously. ${r.carb_does_not_issue_permit||''}</p>
+  box.innerHTML=`<p>If you smell an odor or see smoke or visible emissions, BAAQMD asks you to report it <b>while it is happening</b>. You can call <a href="tel:18003346367">1-800-334-6367</a> (1-800-334-ODOR) or use the online form. Reports can be made anonymously. ${r.carb_does_not_issue_permit||''}</p>
     <ul>${lis}</ul>
     <p class="muted">Dates and links were checked ${r.verified_on||'against official pages'}. Items marked “to be confirmed” were not fully stated on the official page at that check.</p>`;
 }
 function renderWhy(){
   const box=document.getElementById('why'); if(!box)return;
-  box.innerHTML=`<h3>Why this page vs the PurpleAir map</h3>
-    <p>This page uses the same public PurpleAir sensors as the official <a href="https://map.purpleair.com/" target="_blank" rel="noopener">PurpleAir map</a>, which is the best place to browse sensors everywhere and switch among conversions.</p>
+  box.innerHTML=`<p>This page uses the same public PurpleAir sensors as the official <a href="https://map.purpleair.com/" target="_blank" rel="noopener">PurpleAir map</a>, which is the best place to browse sensors everywhere and switch among conversions.</p>
     <p>Here the briefing is local: facility distance and bearing, whether the wind is blowing from the facility toward the school, whether a rise looks localized or area-wide, a 7-day chart, verified news, and official take-action links.</p>`;
 }
 function adviceFor(a){
@@ -563,7 +592,7 @@ function renderSensorNote(){
     return `<li>${paLink(s.id,s.name)}${dist?`<div class="muted">${dist}</div>`:''}</li>`;
   };
   const items=(key?[key]:[]).concat(others).map(li).join('');
-  el.innerHTML=`<h3>Sensors</h3><ul>${items||'<li>Sensor list will appear after the next data update.</li>'}</ul>`;
+  el.innerHTML=`<ul>${items||'<li>Sensor list will appear after the next data update.</li>'}</ul>`;
 }
 function placeFollow(p, opts){
   const park=!!(opts&&opts.park);
@@ -749,15 +778,16 @@ function drawChart(){
   }
   const peakTs=new Set();
   const days=(ev&&ev.spikes&&ev.spikes.days)||[];
-  for(const d of days){for(const e of (d.episodes||[])) peakTs.add(e.peak_t)}
+  const visEp=[].concat(...days.map(d=>(d.episodes||[]).filter(episodeVisible)));
+  for(const e of visEp) peakTs.add(e.peak_t);
   for(const p of pts){
     if(peakTs.has(p.t)) continue;
-    if(p.suspicious||p.burst){
+    if(pointVisible(p, peakTs)){
       s+=`<circle class="evdot" cx="${X(p.t).toFixed(1)}" cy="${Y(p.aqi).toFixed(1)}" r="2.2" fill="${col(p.aqi)}" stroke="#fff" stroke-width="0.8" opacity=".9"/>`;
     }
   }
-  for(const d of days){
-    for(const e of (d.episodes||[])){
+  for(const e of visEp){
+    {
       const p=pts[nearestT(e.peak_t)];if(!p)continue;
       const r=e.overnight?5.2:4.6;
       const stroke=e.overnight?'#1e3a5f':'#fff';
@@ -774,15 +804,154 @@ function drawChart(){
   else if(EV.lock && EV.active!=null) showTip(nearestT(EV.active),true);
   else parkLatest();
 }
+const FILT={sus:true,min:76,ovn:false,loc:false};
+const FILT_KEY='air-spikes-filters';
+function episodeJump(e){return e.jump===true || (e.jump==null && e.peak<76)}
+function episodeVisible(e){
+  if(FILT.ovn && !e.overnight) return false;
+  if(FILT.loc && !e.localized) return false;
+  if(FILT.sus){
+    if(!(e.peak>=FILT.min || episodeJump(e))) return false;
+  }else if(e.peak<FILT.min) return false;
+  return true;
+}
+function pointVisible(p, visiblePeaks){
+  if(visiblePeaks && visiblePeaks.has(p.t)) return true;
+  if(FILT.ovn && !p.overnight) return false;
+  if(FILT.loc && !p.localized) return false;
+  if(FILT.sus){
+    if(!(p.aqi>=FILT.min || p.jump || (p.suspicious && p.aqi<76))) return false;
+  }else if((p.aqi||0)<FILT.min) return false;
+  return !!(p.suspicious||p.burst||p.jump);
+}
+function hashQuery(){
+  const h=(location.hash||'').replace(/^#/,'');
+  const i=h.indexOf('?');
+  if(i<0) return {};
+  const out={};
+  new URLSearchParams(h.slice(i+1)).forEach((v,k)=>{out[k]=v});
+  return out;
+}
+function loadFilt(){
+  try{
+    const s=JSON.parse(localStorage.getItem(FILT_KEY)||'{}');
+    if(typeof s.sus==='boolean') FILT.sus=s.sus;
+    if([76,101,151].includes(+s.min)) FILT.min=+s.min;
+    if(typeof s.ovn==='boolean') FILT.ovn=s.ovn;
+    if(typeof s.loc==='boolean') FILT.loc=s.loc;
+  }catch(ex){}
+  const q=hashQuery();
+  if(q.min && [76,101,151].includes(+q.min)) FILT.min=+q.min;
+  if(q.sus!=null) FILT.sus=!(q.sus==='0'||q.sus==='false');
+  if(q.ovn!=null) FILT.ovn=!(q.ovn==='0'||q.ovn==='false');
+  if(q.loc!=null) FILT.loc=!(q.loc==='0'||q.loc==='false');
+}
+function saveFilt(){
+  try{localStorage.setItem(FILT_KEY,JSON.stringify(FILT))}catch(ex){}
+}
+function filtHash(tab){
+  const qs=new URLSearchParams();
+  if(!FILT.sus) qs.set('sus','0');
+  if(FILT.min!==76) qs.set('min',String(FILT.min));
+  if(FILT.ovn) qs.set('ovn','1');
+  if(FILT.loc) qs.set('loc','1');
+  const q=qs.toString();
+  return '#'+tab+(q?('?'+q):'');
+}
+function syncFiltUI(){
+  const sus=document.getElementById('filt-sus');
+  if(sus) sus.checked=FILT.sus;
+  document.querySelectorAll('.filt-min button').forEach(b=>{
+    const on=+b.getAttribute('data-min')===FILT.min;
+    b.classList.toggle('on',on);
+    b.setAttribute('aria-pressed',on?'true':'false');
+  });
+  const ovn=document.getElementById('filt-ovn'), loc=document.getElementById('filt-loc');
+  if(ovn) ovn.setAttribute('aria-pressed',FILT.ovn?'true':'false');
+  if(loc) loc.setAttribute('aria-pressed',FILT.loc?'true':'false');
+}
+function applyFilt(redraw){
+  saveFilt();
+  const tab=document.querySelector('#tablist [role=tab][aria-selected="true"]');
+  const name=tab?tab.dataset.tab:(tabFromHash());
+  const want=filtHash(name||'now');
+  if(location.hash!==want) history.replaceState(null,'',location.pathname+location.search+want);
+  syncFiltUI();
+  renderSpikes();
+  if(redraw!==false){
+    const now=document.getElementById('panel-now');
+    if(now&&!now.hidden) drawChart();
+  }
+}
+function shortDay(iso){
+  const [y,m,d]=iso.split('-').map(Number);
+  const dt=new Date(Date.UTC(y,m-1,d,12));
+  const w=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][dt.getUTCDay()];
+  const mo=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][dt.getUTCMonth()];
+  return w+' '+mo+' '+d;
+}
+function shortTimeFromPt(pt){
+  const m=String(pt||'').match(/(\d{1,2}:\d{2}\s?[AP]M)/i);
+  return m?m[1].replace(/\s+/,' '):pt;
+}
+function summarizeVisible(dateIso, episodes, meanAqi, meanOthers){
+  const head=shortDay(dateIso);
+  const n=episodes.length;
+  let mean='';
+  if(meanAqi!=null&&meanOthers!=null) mean=`; daily mean AQI ${meanAqi} vs others' ${meanOthers}`;
+  else if(meanAqi!=null) mean=`; daily mean AQI ${meanAqi}`;
+  if(!n) return `${head}: no episodes in this view${mean}.`;
+  const ovn=episodes.filter(e=>e.overnight).length;
+  const mx=episodes.reduce((a,b)=>b.peak>a.peak?b:a);
+  let ep=n===1?('1 episode'+(ovn?' (overnight)':'')):(n+' episodes'+(ovn?` (${ovn} overnight)`:''));
+  if(FILT.sus){const w='suspicious episode'; ep=ep.replace(/episodes?/, n===1?w:w+'s')}
+  let peak=`peak ${mx.peak} at ${shortTimeFromPt(mx.peak_pt)}`;
+  if(mx.localized) peak+=', localized';
+  const wfYes=episodes.filter(e=>e.wind_from_facility===true).length;
+  const wfKnown=episodes.filter(e=>e.wind_from_facility!=null).length;
+  const wind=wfKnown?`wind from facility ${wfYes} of ${wfKnown}`:'wind from facility n/a';
+  const epa=mx.peak_epa!=null?`; max EPA-corrected ${mx.peak_epa}`:'';
+  return `${head}: ${ep}, ${peak}; ${wind}${epa}${mean}.`;
+}
+function weekLine(days, week){
+  const defaultView=FILT.sus&&FILT.min===76&&!FILT.ovn&&!FILT.loc;
+  if(defaultView && week&&week.line) return week.line;
+  const eps=days.flatMap(d=>d._visible||[]);
+  const ovn=eps.filter(e=>e.overnight).length;
+  const loc=eps.filter(e=>e.localized).length;
+  const wfYes=eps.filter(e=>e.wind_from_facility===true).length;
+  const wfKnown=eps.filter(e=>e.wind_from_facility!=null).length;
+  const pct=wfKnown?Math.round(100*wfYes/wfKnown):null;
+  let worst=null, worstDate=null;
+  for(const d of days){
+    for(const e of (d._visible||[])){
+      if(!worst||e.peak>worst.peak){worst=e;worstDate=d.date}
+    }
+  }
+  const n=eps.length;
+  const word=FILT.sus?'suspicious episode':'episode';
+  let line=`This 7-day window: ${n} ${n===1?word:word+'s'}`;
+  line+=`, ${ovn} overnight, ${loc} localized`;
+  if(wfKnown) line+=`, wind from facility in ${wfYes} of ${wfKnown}`+(pct!=null?` (${pct}%)`:'');
+  if(worst) line+=`. Worst peak: ${worst.peak} on ${shortDay(worstDate)} at ${shortTimeFromPt(worst.peak_pt)}.`;
+  else line+='. No episodes in this view.';
+  const filtered=!(FILT.sus&&FILT.min===76&&!FILT.ovn&&!FILT.loc);
+  if(filtered) line+=' (filtered view)';
+  return line;
+}
 function renderSpikes(){
   const box=document.getElementById('spikelist');if(!box)return;
   const rec=evSpikes();
   const def=document.getElementById('spikedef');
   if(def&&rec.definition) def.textContent=rec.definition;
-  const days=rec.days||[];
+  const days=(rec.days||[]).map(d=>({...d, _visible:(d.episodes||[]).filter(episodeVisible)}));
+  const sum=document.getElementById('spikesum');
+  if(sum) sum.textContent=weekLine(days, rec.week);
   if(!days.length){box.innerHTML='<p class="empty">Spike highlights will appear after the next data update.</p>';return}
-  box.innerHTML=days.map(day=>{
-    const items=day.episodes||[];
+  const openDates=new Set([...box.querySelectorAll('details.day[open]')].map(el=>el.getAttribute('data-date')));
+  const firstRender=!box.querySelector('details.day');
+  box.innerHTML=days.map((day,i)=>{
+    const items=day._visible;
     const body=items.length?items.map(e=>{
       const badges=(e.overnight?'<span class="badge overnight">Overnight</span>':'')+(e.localized?'<span class="badge localized">Localized</span>':'');
       const epa=e.peak_epa==null?'':` · EPA-corrected ${e.peak_epa}`;
@@ -791,11 +960,14 @@ function renderSpikes(){
       const ks=keySensor();
       const src=`<div class="src">${paLink(ks.id,ks.name)}</div>`;
       return `<div class="ep" role="button" tabindex="0" data-t="${e.peak_t}" data-id="${e.id}"><div class="head">${spanLabel(e)} · peak ${e.peak}${badges}</div><div class="meta">${e.peak_pt} · raw AQI ${e.peak}${epa}${med}${wf}</div>${src}${e.factors?`<div class="factors">${e.factors}</div>`:''}</div>`;
-    }).join(''):'<p class="empty">No suspicious spikes this day.</p>';
-    return `<div class="day" data-date="${day.date}"><h4>${day.date_pt}</h4>${body}</div>`;
+    }).join(''):'<p class="empty">No episodes in this view.</p>';
+    const open=firstRender?(i===0):openDates.has(day.date);
+    const line=summarizeVisible(day.date, items, day.mean_aqi, day.mean_others);
+    return `<details class="day" data-date="${day.date}"${open?' open':''}><summary><div class="head">${day.date_pt}</div><p class="daysum">${line}</p></summary><div class="day-body">${body}</div></details>`;
   }).join('');
   box.onclick=ev2=>{
     if(ev2.target.closest('a.palink')) return;
+    if(ev2.target.closest('summary')) return;
     const btn=ev2.target.closest('.ep');if(!btn)return;
     showEvidenceTip(+btn.getAttribute('data-t'));
   };
@@ -805,6 +977,26 @@ function renderSpikes(){
     ev2.preventDefault();showEvidenceTip(+btn.getAttribute('data-t'));
   };
 }
+function bindSpikeControls(){
+  if(bindSpikeControls._bound)return;
+  bindSpikeControls._bound=true;
+  const sus=document.getElementById('filt-sus');
+  if(sus) sus.addEventListener('change',()=>{FILT.sus=sus.checked;applyFilt()});
+  document.querySelectorAll('.filt-min button').forEach(b=>{
+    b.addEventListener('click',()=>{FILT.min=+b.getAttribute('data-min');applyFilt()});
+  });
+  const ovn=document.getElementById('filt-ovn'), loc=document.getElementById('filt-loc');
+  if(ovn) ovn.addEventListener('click',()=>{FILT.ovn=!FILT.ovn;applyFilt()});
+  if(loc) loc.addEventListener('click',()=>{FILT.loc=!FILT.loc;applyFilt()});
+  const expand=(sel,on)=>{document.querySelectorAll(sel).forEach(el=>{el.open=on})};
+  const se=document.getElementById('spk-expand'), sc=document.getElementById('spk-collapse');
+  if(se) se.addEventListener('click',()=>expand('#spikelist details.day',true));
+  if(sc) sc.addEventListener('click',()=>expand('#spikelist details.day',false));
+  const de=document.getElementById('det-expand'), dc=document.getElementById('det-collapse');
+  if(de) de.addEventListener('click',()=>expand('#panel-details details.sect',true));
+  if(dc) dc.addEventListener('click',()=>expand('#panel-details details.sect',false));
+}
+
 function showEvidenceTip(t){
   if(t==null||t!==t)return;
   const sheet=document.getElementById('sheet');
@@ -844,7 +1036,7 @@ function setTab(name, opts){
   const sheet=document.getElementById('sheet');
   if(sheet && (opts&&opts.open!==false) && !sheet.classList.contains('open')) sheet.classList.add('open');
   if(!(opts&&opts.hash===false)){
-    const want='#'+name;
+    const want=filtHash(name);
     if(location.hash!==want) history.replaceState(null,'',location.pathname+location.search+want);
   }
   if(name==='now') requestAnimationFrame(()=>drawChart());
@@ -865,7 +1057,7 @@ function bindTabs(){
     else if(e.key==='Home'){e.preventDefault();setTab(tabs[0].dataset.tab);tabs[0].focus()}
     else if(e.key==='End'){e.preventDefault();setTab(tabs[tabs.length-1].dataset.tab);tabs[tabs.length-1].focus()}
   });
-  addEventListener('hashchange',()=>setTab(tabFromHash(),{hash:false}));
+  addEventListener('hashchange',()=>{loadFilt();syncFiltUI();setTab(tabFromHash(),{hash:false});renderSpikes();const now=document.getElementById('panel-now');if(now&&!now.hidden)drawChart()});
 }
 function maybeTipFromURL(){
   const raw=P.get('tip');if(!raw)return;
@@ -896,7 +1088,7 @@ document.getElementById('seg').onclick=e=>{const w=e.target.dataset&&e.target.da
 document.getElementById('pill').onclick=()=>{const m=markers[KEY];if(!m)return;if(MOB())show(KEY);else{m._pinned=true;m.openPopup()}};
 map.on('click',()=>{if(dockId)hide()});
 const sheet=document.getElementById('sheet');
-bindTabs();
+loadFilt();bindSpikeControls();syncFiltUI();bindTabs();
 if(location.hash || P.get('tip') || P.get('sheet')==='open'||(P.get('sheet')!=='closed'&&innerWidth>=640))sheet.classList.add('open');
 if(location.hash) setTab(tabFromHash(),{hash:false,open:true});
 document.getElementById('sh').onclick=()=>{sheet.classList.toggle('open'); if(sheet.classList.contains('open')) requestAnimationFrame(()=>drawChart())};

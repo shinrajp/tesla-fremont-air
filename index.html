@@ -182,7 +182,7 @@ body.docked #sheet{display:none}
 .badge.localized{background:#fef3c7;color:#92400e}
 #evchart .evpeak{cursor:pointer}
 #evchart .evpeak.on{stroke:#111827;stroke-width:2.5}
-#evfollow{position:absolute;z-index:4;width:18px;height:18px;margin-left:-9px;margin-top:-9px;border-radius:50%;border:3px solid #fff;box-shadow:0 0 0 1.5px rgba(17,24,39,.45),0 2px 8px rgba(0,0,0,.35);pointer-events:none;background:#00e400}
+#evfollow{position:absolute;z-index:8;width:20px;height:20px;margin-left:-10px;margin-top:-10px;border-radius:50%;border:3px solid #fff;box-shadow:0 0 0 1.5px rgba(17,24,39,.45),0 2px 8px rgba(0,0,0,.35);pointer-events:none;background:#00e400}
 #evfollow[hidden]{display:none}
 #evdotlab{position:absolute;left:22px;top:50%;transform:translateY(-50%);background:rgba(17,24,39,.92);color:#fff;font:700 11px/1.2 var(--font);padding:3px 7px;border-radius:7px;white-space:nowrap;box-shadow:0 2px 8px rgba(0,0,0,.25);pointer-events:none}
 #evdotlab.left{left:auto;right:22px}
@@ -193,7 +193,7 @@ a.palink{color:#111827;font-weight:650;text-decoration:underline;text-underline-
 .evreadout a.palink{color:#111827}
 #evsensors{margin:6px 0 0;font-size:11.5px;color:var(--mut);line-height:1.45}
 #spikes .ep .src{margin-top:3px;font-size:11.5px}
-#evchart{overflow:visible}
+#evchart{overflow:visible;scroll-margin-top:12px}
 @media (max-width:640px){
   #sheet{max-height:min(76vh,680px)}
   #evchart{height:min(200px,28vh)}
@@ -489,6 +489,7 @@ function render(){
   drawChart();
 }
 let EV={pts:[],t0:0,t1:0,X:null,Y:null,ymax:100,w:0,h:0,pl:26,pt:8,pb:16,avg:null,active:null,lock:false,pending:null,spikes:[]};
+if(P.get('tip')&&+P.get('tip')){EV.pending=+P.get('tip');EV.active=+P.get('tip');EV.lock=true;}
 function evPoints(){
   if(HIST&&HIST.evidence&&HIST.evidence.points&&HIST.evidence.points.length) return HIST.evidence.points;
   const ser=HIST&&HIST.series&&HIST.series[KEY];
@@ -581,15 +582,17 @@ function placeFollow(p, opts){
   if(tip){
     tip.hidden=false;
     tip.innerHTML=tipHTML(p,true);
-    const tw=tip.offsetWidth,th=tip.offsetHeight,pad=6;
-    const roomRight=br.width-(px+12), roomLeft=px-12;
+    const tw=tip.offsetWidth,th=tip.offsetHeight,pad=6,gap=16;
     let left;
-    if(roomLeft>=tw && (roomLeft>=roomRight || roomRight<tw)) left=px-tw-12;
-    else left=px+12;
+    const canRight=px+gap+tw<=br.width-pad, canLeft=px-gap-tw>=pad;
+    if(px>br.width*0.45 && canLeft) left=px-gap-tw;
+    else if(canRight) left=px+gap;
+    else if(canLeft) left=px-gap-tw;
+    else left=Math.max(pad, Math.min(px-tw/2, br.width-tw-pad));
     left=Math.max(pad, Math.min(left, br.width-tw-pad));
     let top;
-    if(py-10-th>=pad) top=py-10-th;
-    else if(py+14+th<=br.height-pad) top=py+14;
+    if(py-12-th>=pad) top=py-12-th;
+    else if(py+16+th<=br.height-pad) top=py+16;
     else top=Math.max(pad, Math.min(py-th/2, br.height-th-pad));
     top=Math.max(pad, Math.min(top, br.height-th-pad));
     tip.style.left=left+'px';
@@ -613,17 +616,19 @@ function hideTip(force){
   parkLatest();
 }
 let _tipRaf=0,_tipI=0,_tipLock=false,_tipPark=false;
+function flushTip(){
+  _tipRaf=0;
+  const p=EV.pts[_tipI]; if(!p||!EV.X)return;
+  EV.active=p.t;
+  EV.lock=_tipLock && !_tipPark;
+  placeFollow(p, {park:_tipPark && !EV.lock});
+}
 function showTip(i,fromList,park){
   if(i==null||i<0||!EV.pts[i])return;
   _tipI=i; _tipLock=!!fromList; _tipPark=!!park;
+  if(fromList||park){flushTip();return}
   if(_tipRaf) return;
-  _tipRaf=requestAnimationFrame(()=>{
-    _tipRaf=0;
-    const p=EV.pts[_tipI]; if(!p||!EV.X)return;
-    EV.active=p.t;
-    EV.lock=_tipLock && !_tipPark;
-    placeFollow(p, {park:_tipPark && !EV.lock});
-  });
+  _tipRaf=requestAnimationFrame(flushTip);
 }
 function bindChart(){
   const el=document.getElementById('evchart');
@@ -782,10 +787,13 @@ function showEvidenceTip(t){
   if(i<0){EV.pending=+t;return}
   showTip(i,true);
   const motion=P.get('tip')?'auto':'smooth';
-  const chart=document.getElementById('evchart')||document.getElementById('evblock');
-  if(chart) chart.scrollIntoView({block:'center',behavior:motion});
-  const item=document.querySelector('#spikes .ep.on');
-  if(item) item.scrollIntoView({block:'nearest',behavior:motion});
+  const sb=document.getElementById('sb');
+  const ro=document.getElementById('evreadout')||document.getElementById('evchart');
+  if(sb&&ro){
+    const top=Math.max(0, ro.offsetTop-8);
+    if(motion==='auto') sb.scrollTop=top;
+    else sb.scrollTo({top:top,behavior:'smooth'});
+  }
 }
 window.showEvidenceTip=showEvidenceTip;
 function maybeTipFromURL(){

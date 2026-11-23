@@ -27,7 +27,7 @@
 *{box-sizing:border-box}html,body{margin:0;height:100%;font-family:var(--font);color:var(--fg);-webkit-font-smoothing:antialiased}
 #map{position:fixed;inset:0;background:#eef0f3}
 .glass{background:var(--glass);backdrop-filter:saturate(1.6) blur(14px);-webkit-backdrop-filter:saturate(1.6) blur(14px);border:1px solid var(--bd);box-shadow:var(--sh);border-radius:var(--r)}
-#top{position:fixed;z-index:1000;top:calc(12px + env(safe-area-inset-top));left:12px;right:12px;display:flex;flex-wrap:wrap;align-items:flex-start;gap:8px 12px;padding:12px 14px 12px 16px;max-width:760px}
+#top{position:fixed;z-index:1000;top:calc(12px + env(safe-area-inset-top));left:12px;right:12px;display:flex;flex-wrap:wrap;align-items:flex-start;gap:6px 12px;padding:10px 14px;max-width:760px}
 #top h1{font-size:17px;line-height:1.15;margin:0;font-weight:700;letter-spacing:-.01em}
 #top .blurb{font-size:12.5px;line-height:1.4;color:#374151;margin:5px 0 0}
 #top .blurb b{color:var(--fg);font-weight:650}
@@ -41,7 +41,7 @@
 .seg{display:inline-flex;background:#f3f4f6;border-radius:10px;padding:3px;gap:2px}
 .seg button{border:0;background:transparent;font:600 12px var(--font);color:#4b5563;padding:6px 10px;border-radius:8px;cursor:pointer;white-space:nowrap}
 .seg button.on{background:#fff;color:var(--fg);box-shadow:0 1px 3px rgba(0,0,0,.12)}
-#aqi-guide{flex:1 1 100%;border-top:1px solid var(--bd);padding-top:8px;margin-top:2px}
+#aqi-guide{padding-top:0;margin-top:0}
 #legchips{display:flex;flex-wrap:wrap;gap:4px}
 #legchips button{border:1px solid rgba(17,24,39,.08);border-radius:8px;padding:4px 7px;font:650 11px var(--font);cursor:pointer;color:#111827;line-height:1.2}
 #legchips button.on{outline:2px solid #111827;outline-offset:1px}
@@ -198,6 +198,21 @@ a.palink{color:#111827;font-weight:650;text-decoration:underline;text-underline-
   #sheet{max-height:min(76vh,680px)}
   #evchart{height:min(200px,28vh)}
 }
+
+#tablist{display:none;gap:3px;padding:0 10px 8px;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;flex:none;overscroll-behavior:contain}
+#tablist::-webkit-scrollbar{display:none}
+#sheet.open #tablist{display:flex}
+#tablist [role=tab]{flex:1 1 0;min-width:4.2em;min-height:40px;padding:8px 10px;border:0;border-radius:10px;background:transparent;font:650 13px var(--font);color:#4b5563;cursor:pointer;white-space:nowrap}
+#tablist [role=tab][aria-selected="true"]{background:#111827;color:#fff}
+#tablist [role=tab]:focus-visible{outline:2px solid #111827;outline-offset:2px}
+.panel{display:none}
+.panel.on{display:block}
+#evhair,#evfollow,#evdotlab,.evtip{pointer-events:none!important}
+#sensorlist ul{list-style:none;margin:0;padding:0}
+#sensorlist li{padding:7px 0;border-bottom:1px solid var(--bd);font-size:12.5px;line-height:1.4}
+#sensorlist li:last-child{border-bottom:0}
+#methods p{margin:0 0 8px}
+#sh .tt{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 </style>
 </head>
 <body>
@@ -205,48 +220,64 @@ a.palink{color:#111827;font-weight:650;text-decoration:underline;text-underline-
 <div id="top" class="glass">
   <div class="grow">
     <h1>Air near Tesla Fremont</h1>
-    <p class="blurb"><b>What am I looking at?</b> A live map of particle pollution (PM2.5) from public PurpleAir sensors near Lila Bringhurst Elementary, Innovation, and the Tesla Fremont facility.</p>
+    <p class="blurb">Live PM2.5 from public PurpleAir sensors near Lila Bringhurst Elementary, Innovation, and the Tesla Fremont facility.</p>
     <div class="sub" id="upd">Loading live readings…</div>
   </div>
   <div class="controls">
     <div class="seg" id="seg"><button data-w="10minute">Now</button><button data-w="60minute" class="on">1 hr</button><button data-w="24hour">24 hr</button></div>
     <button id="pill" title="Open the sensor next to Lila Bringhurst & Innovation"><span class="lab"><b>By the school</b><span id="pilll">1-hr AQI (raw)</span></span><span class="num" id="pilln">–</span></button>
   </div>
-  <div id="aqi-guide">
-    <div id="legchips"></div>
-    <p id="kidmsg">AQI colors follow the U.S. EPA scale. Advice below is for children, in plain language.</p>
-  </div>
 </div>
 <div id="dock"></div>
 <div id="sheet" class="glass">
   <div id="sh"><span class="chev"><svg width="12" height="12" viewBox="0 0 12 12"><path d="M2 8l4-4 4 4" fill="none" stroke="#374151" stroke-width="2" stroke-linecap="round"/></svg></span>
-    <span class="tt" id="shtt">Evidence · 7 days</span><span class="pk" id="pk"></span>
-    <div id="leg"><div class="bar"></div><div class="tk"><span>0</span><span>50</span><span>100</span><span>150</span><span>200</span><span>300+</span></div></div></div>
+    <span class="tt" id="shtt">Air briefing</span><span class="pk" id="pk"></span></div>
+  <div id="tablist" role="tablist" aria-label="Briefing sections">
+    <button type="button" role="tab" id="tab-now" data-tab="now" aria-controls="panel-now" aria-selected="true" tabindex="0">Now</button>
+    <button type="button" role="tab" id="tab-spikes" data-tab="spikes" aria-controls="panel-spikes" aria-selected="false" tabindex="-1">Spikes</button>
+    <button type="button" role="tab" id="tab-news" data-tab="news" aria-controls="panel-news" aria-selected="false" tabindex="-1">News</button>
+    <button type="button" role="tab" id="tab-details" data-tab="details" aria-controls="panel-details" aria-selected="false" tabindex="-1">Details</button>
+  </div>
   <div id="sb">
-    <div id="nowbox" class="block" style="border-top:0;margin-top:0;padding-top:4px"></div>
-    <div class="block" id="evblock">
-      <h3>Evidence · last 7 days</h3>
-      <p class="muted" id="evcap">School-area sensor, 10-minute raw AQI. Hover or drag for a reading at any time. Light gray bands are overnight hours (10 PM–6 AM PT). Green shading marks hours when the wind was blowing from the facility toward the school.</p>
-      <div id="evreadout" class="evreadout" hidden></div>
-      <div id="evchart" role="img" aria-label="Seven-day school-area AQI chart">
-        <svg id="chart"></svg>
-        <div id="evhair" hidden></div>
-        <div id="evfollow" hidden><span id="evdotlab" hidden></span></div>
-        <div id="evtip" class="evtip" hidden></div>
+    <div id="panel-now" class="panel on" role="tabpanel" aria-labelledby="tab-now">
+      <div id="nowbox" class="block" style="border-top:0;margin-top:0;padding-top:4px"></div>
+      <div id="aqi-guide" class="block">
+        <div id="legchips"></div>
+        <p id="kidmsg">AQI colors follow the U.S. EPA scale. Advice is for children, in plain language.</p>
       </div>
-      <p class="muted" id="evnote">Possible factors are automated hints from wind, time of day, and how this sensor compares with others. They are not a finding that the facility or any other source caused a reading. Hover or drag horizontally along the plot; the dot snaps to each 10-minute reading. On a phone, a vertical swipe still scrolls the page.</p>
-      <p class="muted" id="evsensors"></p>
-      <div id="spikes">
-        <h3>Daily spike highlights</h3>
-        <p class="muted" id="spikedef">A suspicious spike is a 10-minute AQI of 76 or higher, or a jump of 35 or more above the prior 1-hour level. Consecutive readings are grouped as one episode.</p>
-        <div id="spikelist"></div>
+      <div class="block" id="evblock">
+        <h3>Last 7 days</h3>
+        <p class="muted" id="evcap">School-area sensor, 10-minute raw AQI. Overnight hours (10 PM–6 AM PT) are shaded gray; green marks hours when the wind was blowing from the facility toward the school.</p>
+        <div id="evchart" role="img" aria-label="Seven-day school-area AQI chart">
+          <svg id="chart"></svg>
+          <div id="evhair" hidden></div>
+          <div id="evfollow" hidden><span id="evdotlab" hidden></span></div>
+          <div id="evtip" class="evtip" hidden></div>
+        </div>
+        <p class="muted" id="evnote">The in-chart tip’s “possible factors” are automated hints, not a finding that the facility or any other source caused a reading. Drag horizontally to move the dot; swipe vertically to scroll.</p>
       </div>
     </div>
-    <div id="news" class="block"></div>
-    <div id="act" class="block"></div>
-    <div id="why" class="block"></div>
-    <div id="bursts" class="block"></div>
-    <div id="foot">Map numbers are <b>raw</b> PurpleAir readings (same as the PurpleAir map’s raw view). Each sensor’s card also shows an <b>EPA-corrected</b> AQI, an official adjustment that often reads a bit lower. Alerts use the raw values.<br>WHO 2021 guideline: 15 µg/m³ 24-hr, 5 µg/m³ annual (reference only).<br>Source: PurpleAir.com public sensors. US EPA PM2.5 AQI. Wind: Open-Meteo.</div>
+    <div id="panel-spikes" class="panel" role="tabpanel" aria-labelledby="tab-spikes" hidden>
+      <div id="spikes">
+        <h3>Daily spike highlights</h3>
+        <p class="muted" id="spikedef">A suspicious spike is a 10-minute AQI of 76 or higher, or a jump of 35 or more above the prior 1-hour level. Consecutive readings are grouped as one episode. Tap an episode to see it on the chart.</p>
+        <div id="spikelist"></div>
+      </div>
+      <div id="bursts" class="block"></div>
+    </div>
+    <div id="panel-news" class="panel" role="tabpanel" aria-labelledby="tab-news" hidden>
+      <div id="news" class="block" style="border-top:0;margin-top:0;padding-top:4px"></div>
+    </div>
+    <div id="panel-details" class="panel" role="tabpanel" aria-labelledby="tab-details" hidden>
+      <div id="sensorlist" class="block" style="border-top:0;margin-top:0;padding-top:4px"></div>
+      <div id="methods" class="block">
+        <h3>How readings are shown</h3>
+        <p>Map numbers are <b>raw</b> PurpleAir readings (the same as the PurpleAir map’s raw view). Each sensor card also shows an <b>EPA-corrected</b> AQI, an official adjustment that often reads a bit lower. Alerts and group-post thresholds use the raw 1-hour value. 10-minute short bursts are flagged for review only and do not by themselves trigger a group post.</p>
+        <p class="muted">WHO 2021 guideline (reference only): 15 µg/m³ 24-hour, 5 µg/m³ annual. Sources: PurpleAir.com public sensors; U.S. EPA PM2.5 AQI; wind from Open-Meteo. This page does not claim the facility caused a given reading.</p>
+      </div>
+      <div id="why" class="block"></div>
+      <div id="act" class="block"></div>
+    </div>
   </div>
 </div>
 <script>
@@ -362,7 +393,7 @@ function paceText(){const p=(DATA&&DATA.pace)||{}, m=(p.minutes||(DATA&&DATA.int
 function renderBursts(){
   const box=document.getElementById('bursts'); if(!box)return;
   const list=(DATA&&DATA.bursts)||[];
-  if(!list.length){box.innerHTML='<h3>Short bursts (10-min)</h3><p class="empty">No short 10-minute bursts recorded recently. A short burst is a brief jump on the 10-minute average; it is flagged for review and does not by itself trigger a group post.</p>';return}
+  if(!list.length){box.innerHTML='<h3>Short bursts (10-min)</h3><p class="empty">No short 10-minute bursts recorded recently.</p>';return}
   const items=list.slice().reverse().map(b=>{
     const loc=b.localized==='yes'?' · localized':'';
     return `<li><b>${b.time_pt||''} PT</b> · ${b.sensor||'Sensor'}: 10-min AQI ${b.aqi_10min??'–'} (1-hr ${b.aqi_60min??'–'})${loc}</li>`}).join('');
@@ -376,19 +407,17 @@ function renderNow(){
   const flag=yn===true?'<span class="flag yes">Toward the school: yes</span>':yn===false?'<span class="flag no">Toward the school: no</span>':'<span class="flag">Toward the school: n/a</span>';
   const pflag=pat.kind==='localized'?'<span class="flag warn">Localized</span>':pat.kind==='area-wide'?'<span class="flag warn">Area-wide</span>':pat.kind==='similar'?'<span class="flag no">Similar across sensors</span>':'';
   const dist=(pl.note)||'';
-  box.innerHTML=`<h3>Wind and pattern right now</h3>
+  box.innerHTML=`<h3>Right now</h3>
     <div>${flag}${pflag}</div>
-    <p class="row2">${w.label||'Wind data is unavailable right now.'}</p>
-    <p>${pat.label||''}</p>
-    <p class="muted">${dist} Wind direction is the direction the wind is blowing from. None of this, by itself, means the facility caused a reading.</p>`;
+    <p class="row2">${w.label||'Wind data is unavailable right now.'}${dist?' '+dist:''}</p>
+    <p>${pat.label||''}</p>`;
   const ht=document.getElementById('shtt');
   if(ht){
-    const bits=['Evidence · 7 days'];
-    if(w.available) bits.push((w.mph??'–')+' mph '+ (w.from_compass||''));
+    const bits=[];
+    if(w.available) bits.push((w.mph??'–')+' mph '+(w.from_compass||''));
     if(yn===true) bits.push('toward school');
     else if(yn===false) bits.push('not toward school');
-    if(pat.kind&&pat.kind!=='unknown') bits.push(pat.kind);
-    ht.textContent=bits.join(' · ');
+    ht.textContent=bits.length?bits.join(' · '):'Air briefing';
   }
 }
 function renderNews(){
@@ -396,10 +425,10 @@ function renderNews(){
   const n=DATA.news||{}, list=n.items||[];
   const checked=n.updated_pt?` Last checked ${n.updated_pt}.`:'';
   const warn=n.warning?`<p class="muted">${n.warning}</p>`:'';
-  if(!list.length){box.innerHTML=`<h3>News & media coverage</h3>${warn}<p>No verified stories are listed right now. This section only shows published articles whose links returned HTTP 200. We do not write these stories.${checked}</p>`;return}
+  if(!list.length){box.innerHTML=`<h3>News & media coverage</h3>${warn}<p>No verified stories are listed right now.${checked}</p>`;return}
   const items=list.map(it=>{const u=esc(it.url||''); if(!/^https?:/i.test(it.url||''))return ''; return `<li><a href="${u}" target="_blank" rel="noopener">${esc(it.title)}</a><span class="meta">${esc(it.outlet||'')} · ${esc(it.date_pt||'')}</span></li>`}).join('');
   box.innerHTML=`<h3>News & media coverage</h3>
-    <p class="muted">Published coverage about air quality, emissions or permits at the Tesla Fremont facility. Headlines come from Google News; each link was checked and returned HTTP 200. We do not write these articles, and listing them is not an endorsement.${checked}</p>
+    <p class="muted">Verified published coverage about air quality, emissions, or permits at the Tesla Fremont facility. We do not write these articles.${checked}</p>
     ${warn}<ul>${items}</ul>`;
 }
 function renderAct(){
@@ -419,9 +448,8 @@ function renderAct(){
 function renderWhy(){
   const box=document.getElementById('why'); if(!box)return;
   box.innerHTML=`<h3>Why this page vs the PurpleAir map</h3>
-    <p>This page uses the same public PurpleAir sensors as the official <a href="https://map.purpleair.com/" target="_blank" rel="noopener">PurpleAir map</a>. The official map is the best place to browse sensors everywhere and to switch among conversions.</p>
-    <p>This page is a local briefing for parents and neighbors near the Tesla Fremont facility, Lila Bringhurst Elementary, and Innovation. It adds facility distance and bearing, live wind (including whether it is blowing from the facility toward the school), whether a rise looks localized or area-wide, a 7-day evidence chart with wind, verified news coverage, and official take-action links.</p>
-    <p>Map numbers here are raw readings, the same as PurpleAir’s raw view. Each card also shows an EPA-corrected AQI. Alerts use the raw 1-hour and 30-minute averages, so a brief spike is less likely to trigger a group post; 10-minute short bursts are flagged for review only. This page does not claim the facility caused a given reading.</p>`;
+    <p>This page uses the same public PurpleAir sensors as the official <a href="https://map.purpleair.com/" target="_blank" rel="noopener">PurpleAir map</a>, which is the best place to browse sensors everywhere and switch among conversions.</p>
+    <p>Here the briefing is local: facility distance and bearing, whether the wind is blowing from the facility toward the school, whether a rise looks localized or area-wide, a 7-day chart, verified news, and official take-action links.</p>`;
 }
 function adviceFor(a){
   if(a==null)return 'School-area reading unavailable right now. Colors follow the U.S. EPA AQI scale; advice is for children.';
@@ -508,7 +536,8 @@ function keySensor(){
 function paHref(id){return 'https://map.purpleair.com/?select='+id}
 function paLink(id,name){
   const n=name||('sensor '+id);
-  return `<a class="palink" href="${paHref(id)}" target="_blank" rel="noopener">${n} (PurpleAir #${id})</a>`;
+  const label=/#\d+/.test(n)?n:`${n} (#${id})`;
+  return `<a class="palink" href="${paHref(id)}" target="_blank" rel="noopener">${label}</a>`;
 }
 function tipHTML(p,compact){
   if(!p)return '';
@@ -525,20 +554,20 @@ function tipHTML(p,compact){
   return `<div class="when">${fmtFull(p.t)}</div><div class="src">${src}</div><div class="vals">Raw AQI <b>${p.aqi}</b>${epa}${bits?(' · '+bits):''}</div>${fac?`<div class="factors">${fac}</div>`:''}`;
 }
 function renderSensorNote(){
-  const el=document.getElementById('evsensors'); if(!el)return;
+  const el=document.getElementById('sensorlist'); if(!el)return;
   const sensors=(DATA&&DATA.sensors)||[];
   const key=sensors.find(s=>s.id===KEY||s.key);
   const others=sensors.filter(s=>!(s.id===KEY||s.key)).slice().sort((a,b)=>(a.km_facility??99)-(b.km_facility??99));
-  const keyBit=key?paLink(key.id,key.name):paLink(KEY,'1a1a_ambition');
-  const list=others.map(s=>{
-    const dist=s.km_facility==null?'':`${s.km_facility} km${s.bearing_compass?(' '+s.bearing_compass):''} of the facility`;
-    return `${s.name||('#'+s.id)}${dist?(' · '+dist):''}`;
-  }).join('; ');
-  el.innerHTML=`School-area sensor: ${keyBit}. Comparison sensors (distance from the Tesla Fremont facility): ${list||'other nearby PurpleAir sensors'}.`;
+  const li=s=>{
+    const dist=s.km_facility==null?'':`${s.km_facility} km${s.bearing_compass?(' '+s.bearing_compass):''} of the Tesla Fremont facility`;
+    return `<li>${paLink(s.id,s.name)}${dist?`<div class="muted">${dist}</div>`:''}</li>`;
+  };
+  const items=(key?[key]:[]).concat(others).map(li).join('');
+  el.innerHTML=`<h3>Sensors</h3><ul>${items||'<li>Sensor list will appear after the next data update.</li>'}</ul>`;
 }
 function placeFollow(p, opts){
   const park=!!(opts&&opts.park);
-  const tip=document.getElementById('evtip'),hair=document.getElementById('evhair'),ro=document.getElementById('evreadout');
+  const tip=document.getElementById('evtip'),hair=document.getElementById('evhair');
   const svg=document.getElementById('chart'),box=document.getElementById('evchart');
   const dot=document.getElementById('evfollow'),lab=document.getElementById('evdotlab');
   if(!svg||!box||!EV.X||!p)return;
@@ -569,7 +598,6 @@ function placeFollow(p, opts){
   if(park){
     if(hair)hair.hidden=true;
     if(tip)tip.hidden=true;
-    if(ro)ro.hidden=true;
     document.querySelectorAll('#spikes .ep.on').forEach(el=>el.classList.remove('on'));
     return;
   }
@@ -598,7 +626,6 @@ function placeFollow(p, opts){
     tip.style.left=left+'px';
     tip.style.top=top+'px';
   }
-  if(ro){ro.hidden=false;ro.innerHTML=tipHTML(p,false)}
   document.querySelectorAll('#spikes .ep').forEach(el=>{
     const a=+el.getAttribute('data-t');
     el.classList.toggle('on', Math.abs(a-p.t)<11*60);
@@ -673,15 +700,15 @@ function bindChart(){
 }
 function drawChart(){
   const svg=document.getElementById('chart');
+  const panel=document.getElementById('panel-now');
   if(!svg||!document.getElementById('sheet').classList.contains('open'))return;
+  if(panel&&panel.hidden)return;
   const pts=evPoints();
   EV.pts=pts;
   const wrap=document.getElementById('evchart');
   const w=(wrap&&wrap.clientWidth)||svg.clientWidth||600;
   const h=(wrap&&wrap.clientHeight)||svg.clientHeight||180;
-  const cap=document.getElementById('evcap');
   const ev=HIST&&HIST.evidence;
-  if(cap&&ev&&ev.subtitle) cap.textContent=ev.subtitle+'. Hover or drag for a reading at any time. Light gray bands are overnight hours (10 PM–6 AM PT). Green shading marks hours when the wind was blowing from the facility toward the school.';
   if(!pts||pts.length<2){svg.innerHTML='';return}
   const t0=pts[0].t,t1=pts[pts.length-1].t;
   const mx=Math.max(100,...pts.map(p=>p.aqi||0));
@@ -781,21 +808,65 @@ function renderSpikes(){
 function showEvidenceTip(t){
   if(t==null||t!==t)return;
   const sheet=document.getElementById('sheet');
-  if(sheet&&!sheet.classList.contains('open')){sheet.classList.add('open')}
+  if(sheet&&!sheet.classList.contains('open')) sheet.classList.add('open');
+  setTab('now',{hash:false});
   if(!EV.X){EV.pending=+t;drawChart();return}
   const i=nearestT(+t);
   if(i<0){EV.pending=+t;return}
   showTip(i,true);
-  const motion=P.get('tip')?'auto':'smooth';
   const sb=document.getElementById('sb');
-  const ro=document.getElementById('evreadout')||document.getElementById('evchart');
-  if(sb&&ro){
-    const top=Math.max(0, ro.offsetTop-8);
-    if(motion==='auto') sb.scrollTop=top;
-    else sb.scrollTo({top:top,behavior:'smooth'});
+  const chart=document.getElementById('evchart');
+  if(sb&&chart){
+    const top=chart.offsetTop-8;
+    sb.scrollTop=Math.max(0,top);
   }
 }
 window.showEvidenceTip=showEvidenceTip;
+const TABS=['now','spikes','news','details'];
+const TAB_ALIAS={chart:'now',evidence:'now',act:'details',why:'details',methods:'details',sensors:'details',bursts:'spikes'};
+function tabFromHash(){
+  const h=(location.hash||'').replace(/^#/,'').split('?')[0].toLowerCase();
+  return TAB_ALIAS[h] || (TABS.includes(h)?h:'now');
+}
+function setTab(name, opts){
+  name=TAB_ALIAS[name]||name;
+  if(!TABS.includes(name)) name='now';
+  document.querySelectorAll('#tablist [role=tab]').forEach(btn=>{
+    const on=btn.dataset.tab===name;
+    btn.setAttribute('aria-selected', on?'true':'false');
+    btn.tabIndex=on?0:-1;
+  });
+  document.querySelectorAll('#sb > .panel').forEach(p=>{
+    const on=p.id==='panel-'+name;
+    p.classList.toggle('on', on);
+    p.hidden=!on;
+  });
+  const sheet=document.getElementById('sheet');
+  if(sheet && (opts&&opts.open!==false) && !sheet.classList.contains('open')) sheet.classList.add('open');
+  if(!(opts&&opts.hash===false)){
+    const want='#'+name;
+    if(location.hash!==want) history.replaceState(null,'',location.pathname+location.search+want);
+  }
+  if(name==='now') requestAnimationFrame(()=>drawChart());
+}
+function bindTabs(){
+  const list=document.getElementById('tablist'); if(!list||list._bound)return;
+  list._bound=true;
+  list.addEventListener('click',e=>{
+    const b=e.target.closest('[role=tab]'); if(!b)return;
+    setTab(b.dataset.tab);
+  });
+  list.addEventListener('keydown',e=>{
+    const tabs=[...list.querySelectorAll('[role=tab]')];
+    let i=tabs.findIndex(x=>x.getAttribute('aria-selected')==='true');
+    if(i<0)i=0;
+    if(e.key==='ArrowRight'||e.key==='ArrowDown'){i=(i+1)%tabs.length;e.preventDefault();setTab(tabs[i].dataset.tab);tabs[i].focus()}
+    else if(e.key==='ArrowLeft'||e.key==='ArrowUp'){i=(i-1+tabs.length)%tabs.length;e.preventDefault();setTab(tabs[i].dataset.tab);tabs[i].focus()}
+    else if(e.key==='Home'){e.preventDefault();setTab(tabs[0].dataset.tab);tabs[0].focus()}
+    else if(e.key==='End'){e.preventDefault();setTab(tabs[tabs.length-1].dataset.tab);tabs[tabs.length-1].focus()}
+  });
+  addEventListener('hashchange',()=>setTab(tabFromHash(),{hash:false}));
+}
 function maybeTipFromURL(){
   const raw=P.get('tip');if(!raw)return;
   const t=+raw;
@@ -825,10 +896,12 @@ document.getElementById('seg').onclick=e=>{const w=e.target.dataset&&e.target.da
 document.getElementById('pill').onclick=()=>{const m=markers[KEY];if(!m)return;if(MOB())show(KEY);else{m._pinned=true;m.openPopup()}};
 map.on('click',()=>{if(dockId)hide()});
 const sheet=document.getElementById('sheet');
-if(P.get('sheet')==='open'||(P.get('sheet')!=='closed'&&innerWidth>=640))sheet.classList.add('open');
-document.getElementById('sh').onclick=()=>{sheet.classList.toggle('open');drawChart()};
-addEventListener('resize',()=>drawChart());
-load(true).then(()=>maybeTipFromURL());setInterval(load,5*60*1000);
+bindTabs();
+if(location.hash || P.get('tip') || P.get('sheet')==='open'||(P.get('sheet')!=='closed'&&innerWidth>=640))sheet.classList.add('open');
+if(location.hash) setTab(tabFromHash(),{hash:false,open:true});
+document.getElementById('sh').onclick=()=>{sheet.classList.toggle('open'); if(sheet.classList.contains('open')) requestAnimationFrame(()=>drawChart())};
+addEventListener('resize',()=>{if(sheet.classList.contains('open')) drawChart()});
+load(true).then(()=>{ if(P.get('tip')) maybeTipFromURL(); else if(location.hash) setTab(tabFromHash(),{hash:false}); });setInterval(load,5*60*1000);
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)load()});
 </script>
 </body>

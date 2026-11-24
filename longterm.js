@@ -14,6 +14,11 @@
     loading:null
   };
 
+  function tr(k, vars){ return (window.I18N && I18N.t) ? I18N.t(k, vars) : k; }
+  function locName(){ return (window.I18N && I18N.locale) ? I18N.locale() : 'en-US'; }
+  function seriesLabel(k){
+    return {s:tr('seriesSchool'), n:tr('seriesNear'), m:tr('seriesMedian'), r:tr('seriesReg')}[k]||k;
+  }
   function base(){
     const p=location.pathname || '/';
     const dir=p.endsWith('/')?p:p.replace(/[^/]+$/,'');
@@ -25,9 +30,9 @@
   }
   function fmtDay(s){
     if(!s) return '';
-    const [y,m,d]=s.split('-');
-    const months='Jan Feb Mar Apr May Jun Jul Aug Sep Oct Nov Dec'.split(' ');
-    return months[+m-1]+' '+(+d)+', '+y;
+    const [y,m,d]=s.split('-').map(Number);
+    const dt=new Date(Date.UTC(y,m-1,d,20));
+    return dt.toLocaleDateString(locName(),{month:'short',day:'numeric',year:'numeric',timeZone:'UTC'});
   }
   function todayISO(){
     try{
@@ -109,7 +114,7 @@
     }).catch(err=>{
       LT.loading=null;
       const lead=document.getElementById('lt-lead');
-      if(lead) lead.textContent='Long-term history could not be loaded right now. Please try opening this section again.';
+      if(lead) lead.textContent=tr('ltNoLoad');
       throw err;
     });
     return LT.loading;
@@ -123,23 +128,27 @@
         const a=s.first_daily||s.start, z=s.end||idx.end;
         return (s.label||s.id)+' ('+(a||'?')+' to '+(z||'now')+')';
       });
-      lead.textContent='Daily EPA-corrected AQI from 2020 through '+idx.end+'. School-area sensor from Oct 2026; earlier nearby outdoor sensors from Apr 2020; other-sensors median; BAAQMD Jackson St, San Jose through 2024. Gaps are “no data,” not zeros. Not a claim that the facility caused a reading.';
+      lead.textContent=tr('ltLeadLoaded',{end:idx.end});
     }
     const ser=document.getElementById('lt-series');
-    if(ser && !ser.childElementCount){
-      [['s',LABELS.s],['n',LABELS.n],['m',LABELS.m],['r',LABELS.r]].forEach(([k,lab])=>{
-        const b=document.createElement('button');
-        b.type='button'; b.dataset.k=k; b.textContent=lab;
-        b.classList.toggle('on', !!LT.on[k]);
-        b.setAttribute('aria-pressed', LT.on[k]?'true':'false');
-        b.addEventListener('click',()=>{
-          LT.on[k]=!LT.on[k];
-          b.classList.toggle('on', LT.on[k]);
+    if(ser){
+      if(!ser.childElementCount){
+        ['s','n','m','r'].forEach(k=>{
+          const b=document.createElement('button');
+          b.type='button'; b.dataset.k=k; b.textContent=seriesLabel(k);
+          b.classList.toggle('on', !!LT.on[k]);
           b.setAttribute('aria-pressed', LT.on[k]?'true':'false');
-          drawAll(); drawYear();
+          b.addEventListener('click',()=>{
+            LT.on[k]=!LT.on[k];
+            b.classList.toggle('on', LT.on[k]);
+            b.setAttribute('aria-pressed', LT.on[k]?'true':'false');
+            drawAll(); drawYear();
+          });
+          ser.appendChild(b);
         });
-        ser.appendChild(b);
-      });
+      } else {
+        ser.querySelectorAll('button[data-k]').forEach(b=>{ b.textContent=seriesLabel(b.dataset.k); });
+      }
     }
     const yrs=document.getElementById('lt-years');
     if(yrs && !yrs.childElementCount){
@@ -160,27 +169,47 @@
   function fillTrend(){
     const box=document.getElementById('lt-trend-body');
     if(!box || !LT.idx) return;
-    const idx=LT.idx, tr=idx.trends||{};
-    const takes=idx.takeaways||[];
-    const ul=document.createElement('ul');
-    takes.forEach(t=>{const li=document.createElement('li'); li.textContent=t; ul.appendChild(li);});
-    const yoy=tr.yoy_near_facility_ex_smoke||{};
-    const med=tr.yoy_median_ex_smoke||{};
-    const reg=tr.yoy_regulatory_ex_smoke||{};
+    const idx=LT.idx, trends=idx.trends||{};
+    const yoy=trends.yoy_near_facility_ex_smoke||{};
+    const med=trends.yoy_median_ex_smoke||{};
+    const reg=trends.yoy_regulatory_ex_smoke||{};
     const years=Object.keys(yoy).sort();
+    const fmtList=obj=>years.filter(y=>obj[y]!=null).map(y=>y+': '+Number(obj[y]).toFixed(1)).join(', ');
+    const sen=trends.theil_sen_near_facility||{};
+    const slope=sen.aqi_per_year==null?'–':((sen.aqi_per_year>0?'+':'')+sen.aqi_per_year);
+    const months=sen.n_months||'–';
+    const excess=trends.mean_excess_near_minus_area||{};
+    const wind=trends.wind_localized_correlation||{};
+    const w26=wind['2026']||{};
+    const season=trends.seasonality_monthly_mean_ex_smoke||{};
+    let hiM=null, loM=null, hi=null, lo=null;
+    Object.keys(season).forEach(mm=>{
+      const v=season[mm]; if(v==null) return;
+      if(hi==null||v>hi){hi=v; hiM=mm;}
+      if(lo==null||v<lo){lo=v; loM=mm;}
+    });
+    const monthName=mm=>{
+      if(window.I18N && I18N.month) return I18N.month(String(mm));
+      return mm;
+    };
     let table='';
     if(years.length){
-      table='<table class="lt-yoy"><thead><tr><th>Year</th><th>Near-facility mean*</th><th>Other-sensors median*</th><th>Regulatory*</th></tr></thead><tbody>'+
-        years.map(y=>{
-          const cell=v=>v==null?'no data':Number(v).toFixed(1);
-          return `<tr><td>${y}</td><td>${cell(yoy[y])}</td><td>${cell(med[y])}</td><td>${cell(reg[y])}</td></tr>`;
-        }).join('')+'</tbody></table>'+
-        '<p class="lt-note">*Yearly mean of daily AQI, with August–October 2020 wildfire-smoke days excluded from the trend figures above. Theil-Sen slope on monthly means for the near-facility series: '+(
-          (tr.theil_sen_near_facility && tr.theil_sen_near_facility.aqi_per_year!=null)
-            ? (tr.theil_sen_near_facility.aqi_per_year>0?'+':'')+tr.theil_sen_near_facility.aqi_per_year+' AQI per year'
-            : 'n/a'
-        )+'. Correlation only — not a cause.</p>';
+      const cell=v=>v==null?tr('ltNoData'):Number(v).toFixed(1);
+      table='<table class="lt-yoy"><thead><tr><th>'+tr('colYear')+'</th><th>'+tr('colNear')+'</th><th>'+tr('colMedian')+'</th><th>'+tr('colReg')+'</th></tr></thead><tbody>'+
+        years.map(y=>`<tr><td>${y}</td><td>${cell(yoy[y])}</td><td>${cell(med[y])}</td><td>${cell(reg[y])}</td></tr>`).join('')+'</tbody></table>'+
+        '<p class="lt-note">'+tr('ltTableNote',{slope: slope==='–'?slope:slope+' AQI / yr'})+'</p>';
     }
+    const ul=document.createElement('ul');
+    const takes=[
+      tr('takeYoy',{list:fmtList(yoy)}),
+      tr('takeSlope',{slope, months}),
+      tr('takeExcess',{list:fmtList(excess)}),
+      tr('takeWind',{days:w26.localized_days??'–', pct:w26.localized_from_facility_pct??'–', other:w26.other_from_facility_pct??'–'}),
+      tr('takeSeason',{hiMonth:monthName(hiM||''), hi:hi!=null?Number(hi).toFixed(1):'–', loMonth:monthName(loM||''), lo:lo!=null?Number(lo).toFixed(1):'–'}),
+      tr('takeCounts'),
+      tr('takeCaveat')
+    ];
+    takes.forEach(text=>{const li=document.createElement('li'); li.textContent=text; ul.appendChild(li);});
     box.innerHTML='';
     if(table) box.insertAdjacentHTML('beforeend', table);
     box.appendChild(ul);
@@ -378,10 +407,10 @@
     if(!rows.length){
       svg.innerHTML='';
       if(tip){tip.hidden=true; tip.style.display='none';}
-      if(note) note.textContent='No data in this date range.';
+      if(note) note.textContent=tr('ltNoDataRange');
       return;
     }
-    if(note) note.textContent=`${fmtDay(a)} – ${fmtDay(b)}. Thin lines are daily values; thicker lines are a 30-day rolling average. Yellow bands mark wildfire-smoke periods. Drag across the chart to zoom; use the range buttons to reset.`;
+    if(note) note.textContent=tr('ltNoteRolling',{a:fmtDay(a), b:fmtDay(b)});
     const layout=drawFrame(svg, rows, {rolling:true});
     if(layout) bindTip(wrap, tip, layout);
   }
@@ -390,18 +419,16 @@
     const st=(LT.idx.stats||{})[String(year)]||{};
     const cell=(label,k)=>{
       const b=st[k]||{};
-      if(!b.n) return `<div><b>${label}</b>no data</div>`;
-      const spikes=k==='school'?st.spikes:null;
+      if(!b.n) return `<div><b>${label}</b>${tr('ltNoData')}</div>`;
       const sp= (k==='school')
-        ? (st.spikes==null? ' · spikes: no 10-minute data' : ` · suspicious spikes: ${st.spikes}`)
+        ? (st.spikes==null? ' · '+tr('spikesNone') : ' · '+tr('spikesCount',{n:st.spikes}))
         : '';
-      return `<div><b>${label}</b>Mean ${b.mean} · ${b.days_over_50} days over 50 · ${b.days_over_100} days over 100${sp}</div>`;
+      return `<div><b>${label}</b>${tr('statMean',{mean:b.mean, d50:b.days_over_50, d100:b.days_over_100})}${sp}</div>`;
     };
-    // spikes once, on a fifth box
     const sp = st.spikes==null
-      ? `<div><b>Suspicious spikes</b>no 10-minute data this year</div>`
-      : `<div><b>Suspicious spikes</b>${st.spikes} official episode${st.spikes===1?'':'s'} (10-minute record only)</div>`;
-    return cell('School-area sensor','school')+cell('Earlier nearby sensors','near')+cell("Other sensors' median",'median')+cell('Regulatory monitor','reg')+sp;
+      ? `<div><b>${tr('flaggedSpikes')}</b>${tr('no10minYear')}</div>`
+      : `<div><b>${tr('flaggedSpikes')}</b>${tr('officialEpisodes',{n:st.spikes, s:st.spikes===1?'':'s', es:st.spikes===1?'':'es'})}</div>`;
+    return cell(tr('seriesSchool'),'school')+cell(tr('seriesNear'),'near')+cell(tr('seriesMedian'),'median')+cell(tr('seriesReg'),'reg')+sp;
   }
 
   function drawYear(){
@@ -415,7 +442,7 @@
     const rows=LT.rows.filter(r=>r.d.slice(0,4)===String(y));
     const any=rows.some(r=>['s','n','m','r'].some(k=>LT.on[k] && r[k]!=null));
     if(!any){
-      svg.innerHTML=`<text x="50%" y="50%" text-anchor="middle" fill="#6b7280" font-size="13" font-family="system-ui,sans-serif">no data</text>`;
+      svg.innerHTML=`<text x="50%" y="50%" text-anchor="middle" fill="#6b7280" font-size="13" font-family="system-ui,sans-serif">${tr('ltNoData')}</text>`;
       if(tip){tip.hidden=true; tip.style.display='none';}
       return;
     }
@@ -445,6 +472,15 @@
       if(wrap.open && LT.ready){ drawAll(); drawYear(); }
     });
   }
+
+  window.refreshLongterm=function(){
+    const lead=document.getElementById('lt-lead');
+    if(lead && !LT.ready) lead.textContent=tr('ltLead');
+    const note=document.getElementById('lt-all-note');
+    if(note && !LT.ready) note.textContent=tr('ltAllNote');
+    fillChrome();
+    if(LT.ready){ fillTrend(); drawAll(); drawYear(); }
+  };
 
   if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', bind);
   else bind();

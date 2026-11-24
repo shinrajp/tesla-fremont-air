@@ -196,7 +196,7 @@ a.palink{color:#111827;font-weight:650;text-decoration:underline;text-underline-
 #evchart{overflow:visible;scroll-margin-top:12px}
 @media (max-width:640px){
   #sheet{max-height:min(76vh,680px)}
-  #evchart{height:min(200px,28vh)}
+  #evchart{height:min(218px,32vh)}
 }
 
 #tablist{display:none;gap:3px;padding:0 10px 8px;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;flex:none;overscroll-behavior:contain}
@@ -241,6 +241,18 @@ details.sect>summary{font-size:13.5px}
 .windrose .cap{font:500 11.5px var(--font);color:#4b5563;margin:4px 0 0;line-height:1.3}
 #filthint{font-size:11.5px;margin:2px 0 6px;line-height:1.3}
 #spikedef{margin:0 0 6px}
+
+.evhead{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:0 0 6px}
+.evhead h3{margin:0}
+#windleg{margin:0 0 8px;font-size:12px;line-height:1.4}
+#windleg[hidden]{display:none}
+#tog-wind, #map-wind{min-height:32px}
+.leaflet-top.leaflet-right .wind-ctl{margin:12px 12px 0 0;display:flex;flex-direction:column;align-items:flex-start;gap:6px;border:0;background:none;box-shadow:none}
+.wind-ctl .chip{background:rgba(255,255,255,.92);color:#111827;box-shadow:0 1px 4px rgba(0,0,0,.18)}
+.wind-ctl .chip.on,.wind-ctl .chip[aria-pressed="true"]{background:#111827;color:#fff;border-color:#111827}
+.wind-card{max-width:220px;background:rgba(255,255,255,.94);border:1px solid #e5e7eb;border-radius:10px;padding:7px 9px;box-shadow:0 2px 8px rgba(0,0,0,.14);font:500 12px/1.35 var(--font);color:#111827}
+.wind-card b{display:block;font-weight:750;margin:0 0 2px}
+.wind-card p{margin:0;color:#374151;font-weight:500}
 </style>
 </head>
 <body>
@@ -274,8 +286,12 @@ details.sect>summary{font-size:13.5px}
         <p id="kidmsg">AQI colors follow the U.S. EPA scale. Advice is for children, in plain language.</p>
       </div>
       <div class="block" id="evblock">
-        <h3>Last 7 days</h3>
-        <p class="muted" id="evcap">School-area sensor, 10-minute raw AQI. Overnight hours (10 PM–6 AM PT) are shaded gray; green marks hours when the wind was blowing from the facility toward the school.</p>
+        <div class="evhead">
+          <h3>Last 7 days</h3>
+          <button type="button" class="chip" id="tog-wind" aria-pressed="false">Show wind</button>
+        </div>
+        <p class="muted" id="evcap">School-area sensor, 10-minute raw AQI. Overnight hours (10 PM–6 AM PT) are shaded gray.</p>
+        <p class="muted" id="windleg" hidden>Arrows point where the wind is going. Light green marks hours when the wind came from the facility direction.</p>
         <div id="evchart" role="img" aria-label="Seven-day school-area AQI chart">
           <svg id="chart"></svg>
           <div id="evhair" hidden></div>
@@ -366,10 +382,41 @@ let windMark=null;
 function renderWindArrow(){
   const w=DATA&&DATA.wind;
   if(windMark){map.removeLayer(windMark);windMark=null}
+  const card=document.getElementById('windcard');
+  if(!SHOW_WIND){
+    if(card) card.hidden=true;
+    return;
+  }
+  if(card){
+    if(w&&w.available){
+      const speed=(w.mph!=null?(w.mph+' mph'):'')+(w.from_compass?(' from the '+w.from_compass):'')+(w.from_deg!=null?` (${w.from_deg}°)`:'');
+      let plain=w.toward_text||w.label||'';
+      if(w.calm) plain=w.toward_text||'Wind is light, so direction is less certain right now.';
+      card.innerHTML=`<b>${speed.trim()||'Wind'}</b><p>${plain}</p>`;
+      card.hidden=false;
+    } else {
+      card.innerHTML='<b>Wind</b><p>Wind data is unavailable right now.</p>';
+      card.hidden=false;
+    }
+  }
   if(!w||!w.available||w.from_deg==null)return;
   const going=(w.from_deg+180)%360; // arrow points where the wind is going
   const html=`<div class="wind-arrow" title="Wind from ${w.from_compass} (${w.mph} mph)" style="transform:rotate(${going}deg)"><i></i></div>`;
   windMark=L.marker(PLANT,{interactive:false,keyboard:false,zIndexOffset:500,icon:L.divIcon({className:'',iconSize:[36,36],iconAnchor:[18,30],html})}).addTo(map);
+}
+function addWindControl(){
+  if(addWindControl._done)return;
+  addWindControl._done=true;
+  const C=L.Control.extend({
+    onAdd(){
+      const d=L.DomUtil.create('div','wind-ctl');
+      d.innerHTML='<button type="button" class="chip" id="map-wind" aria-pressed="false">Show wind</button><div id="windcard" class="wind-card" hidden></div>';
+      L.DomEvent.disableClickPropagation(d);
+      L.DomEvent.disableScrollPropagation(d);
+      return d;
+    }
+  });
+  new C({position:'topright'}).addTo(map);
 }
 function fmtT(t){return new Date(t*1000).toLocaleString('en-US',{timeZone:'America/Los_Angeles',weekday:'short',hour:'numeric',minute:'2-digit'})}
 function ptParts(t){
@@ -586,13 +633,23 @@ function tipHTML(p,compact){
   const src=paLink(ks.id, ks.name);
   const epa=p.epa==null?'':' · EPA-corrected '+p.epa;
   const med=p.median==null?'':'Others’ median '+p.median;
-  const wind=p.mph!=null?('Wind '+(p.calm?'calm, ':'')+p.mph+' mph'+(p.from?(' from '+p.from):'')):'';
-  const bits=[med,wind].filter(Boolean).join(' · ');
+  let windBits='', windBlock='';
+  if(SHOW_WIND){
+    if(p.mph!=null){
+      windBits='Wind '+(p.calm?'light, ':'')+p.mph+' mph'+(p.from?(' from '+p.from):'')+(p.from_deg!=null?` (${p.from_deg}°)`:'');
+    } else windBits='Wind n/a';
+    const facYn=p.from_facility===true?'yes':p.from_facility===false?'no':'n/a';
+    windBlock=`<div>${windBits}</div><div>From facility: ${facYn}</div>`;
+  } else {
+    const wind=p.mph!=null?('Wind '+(p.calm?'calm, ':'')+p.mph+' mph'+(p.from?(' from '+p.from):'')):'';
+    windBits=[med,wind].filter(Boolean).join(' · ');
+  }
   const fac=p.factors||'';
   if(compact){
-    return `<div class="when">${fmtFull(p.t)}</div><div class="src">${src}</div><div>Raw AQI <b>${p.aqi}</b>${epa}</div>${bits?`<div>${bits}</div>`:''}${fac?`<div>${fac}</div>`:''}`;
+    const mid=SHOW_WIND?(`${med?`<div>${med}</div>`:''}${windBlock}`):(windBits?`<div>${windBits}</div>`:'');
+    return `<div class="when">${fmtFull(p.t)}</div><div class="src">${src}</div><div>Raw AQI <b>${p.aqi}</b>${epa}</div>${mid}${fac?`<div>${fac}</div>`:''}`;
   }
-  return `<div class="when">${fmtFull(p.t)}</div><div class="src">${src}</div><div class="vals">Raw AQI <b>${p.aqi}</b>${epa}${bits?(' · '+bits):''}</div>${fac?`<div class="factors">${fac}</div>`:''}`;
+  return `<div class="when">${fmtFull(p.t)}</div><div class="src">${src}</div><div class="vals">Raw AQI <b>${p.aqi}</b>${epa}${(!SHOW_WIND&&windBits)?(' · '+windBits):''}</div>${SHOW_WIND?(med?`<div>${med}</div>`:'')+windBlock:''}${fac?`<div class="factors">${fac}</div>`:''}`;
 }
 function renderSensorNote(){
   const el=document.getElementById('sensorlist'); if(!el)return;
@@ -754,7 +811,7 @@ function drawChart(){
   const t0=pts[0].t,t1=pts[pts.length-1].t;
   const mx=Math.max(100,...pts.map(p=>p.aqi||0));
   const ymax=Math.ceil(mx/50)*50;
-  const pl=26,pb=16,pt=8;
+  const pl=26,pb=28,pt=8;
   const X=t=>pl+(t-t0)/(t1-t0)*(w-pl-2);
   const Y=a=>pt+(1-Math.min(a,ymax)/ymax)*(h-pt-pb);
   EV.t0=t0;EV.t1=t1;EV.X=X;EV.Y=Y;EV.ymax=ymax;EV.w=w;EV.h=h;EV.pl=pl;EV.pt=pt;EV.pb=pb;
@@ -772,7 +829,14 @@ function drawChart(){
     }
   }
   const wind=(DATA&&DATA.wind_series)||[];
-  for(const row of wind){if(!row||!row[3])continue;const x1=X(Math.max(row[0],t0)),x2=X(Math.min(row[0]+3600,t1));if(x2<=x1)continue;s+=`<rect x="${x1.toFixed(1)}" y="${pt}" width="${(x2-x1).toFixed(1)}" height="${h-pt-pb}" fill="#14532d" opacity=".10"/>`}
+  if(SHOW_WIND){
+    for(const row of wind){
+      if(!row||row[2]==null||!isFromFacility(row[2])) continue;
+      const x1=X(Math.max(row[0],t0)),x2=X(Math.min(row[0]+3600,t1));
+      if(x2<=x1)continue;
+      s+=`<rect x="${x1.toFixed(1)}" y="${pt}" width="${(x2-x1).toFixed(1)}" height="${h-pt-pb}" fill="#14532d" opacity=".12"/>`;
+    }
+  }
   for(let v=50;v<ymax;v+=50)s+=`<line x1="${pl}" x2="${w-2}" y1="${Y(v)}" y2="${Y(v)}" stroke="#e5e7eb" stroke-dasharray="3 3"/>`;
   for(let v=0;v<=ymax;v+=50)s+=`<text x="${pl-5}" y="${Y(v)+3.5}" font-size="10" fill="#9ca3af" text-anchor="end">${v}</text>`;
   const fmtH=new Intl.DateTimeFormat('en-US',{timeZone:'America/Los_Angeles',hour:'numeric',hourCycle:'h23'});
@@ -806,6 +870,23 @@ function drawChart(){
       s+=`<circle class="evpeak" data-t="${e.peak_t}" data-id="${e.id}" cx="${X(p.t).toFixed(1)}" cy="${Y(p.aqi).toFixed(1)}" r="${r}" fill="${col(p.aqi)}" stroke="${stroke}" stroke-width="1.8"/>`;
     }
   }
+  if(SHOW_WIND){
+    const yA=h-pb+8;
+    const minGap=15;
+    let lastX=-1e9;
+    const hours=wind.filter(r=>r&&r[2]!=null&&r[0]+3600>=t0&&r[0]<=t1).sort((a,b)=>a[0]-b[0]);
+    for(const row of hours){
+      const x=X(Math.min(Math.max(row[0]+1800,t0),t1));
+      if(x-lastX<minGap) continue;
+      lastX=x;
+      const going=(row[2]+180)%360;
+      const fac=isFromFacility(row[2]);
+      const light=row[1]!=null&&row[1]<4;
+      const fill=fac?'#14532d':'#6b7280';
+      const op=light?0.4:0.9;
+      s+=`<g class="warw" transform="translate(${x.toFixed(1)},${yA.toFixed(1)}) rotate(${going.toFixed(0)})" opacity="${op}"><polygon points="0,-6 -3.6,5 3.6,5" fill="${fill}"/></g>`;
+    }
+  }
   svg.setAttribute('viewBox',`0 0 ${w} ${h}`);
   svg.setAttribute('width',w);
   svg.setAttribute('height',h);
@@ -816,6 +897,15 @@ function drawChart(){
   else if(EV.lock && EV.active!=null) showTip(nearestT(EV.active),true);
   else parkLatest();
 }
+const FAC_FROM=176;
+function angDiff(a,b){let d=Math.abs(a-b)%360; if(d>180)d=360-d; return d}
+function isFromFacility(deg){
+  if(deg==null||deg!==deg) return null;
+  const cone=((DATA&&DATA.wind)||{}).cone_deg||60;
+  return angDiff(deg, FAC_FROM)<=cone;
+}
+let SHOW_WIND=false;
+const WIND_KEY='air-show-wind';
 const FILT={sus:true,min:76,ovn:false,loc:false};
 const FILT_KEY='air-spikes-filters';
 function episodeJump(e){return e.jump===true || (e.jump==null && e.peak<76)}
@@ -857,9 +947,16 @@ function loadFilt(){
   if(q.sus!=null) FILT.sus=!(q.sus==='0'||q.sus==='false');
   if(q.ovn!=null) FILT.ovn=!(q.ovn==='0'||q.ovn==='false');
   if(q.loc!=null) FILT.loc=!(q.loc==='0'||q.loc==='false');
+  try{
+    const w=localStorage.getItem(WIND_KEY);
+    if(w==='1'||w==='true') SHOW_WIND=true;
+    if(w==='0'||w==='false') SHOW_WIND=false;
+  }catch(ex){}
+  if(q.wind!=null) SHOW_WIND=!(q.wind==='0'||q.wind==='false');
 }
 function saveFilt(){
   try{localStorage.setItem(FILT_KEY,JSON.stringify(FILT))}catch(ex){}
+  try{localStorage.setItem(WIND_KEY, SHOW_WIND?'1':'0')}catch(ex){}
 }
 function filtHash(tab){
   const qs=new URLSearchParams();
@@ -867,6 +964,7 @@ function filtHash(tab){
   if(FILT.min!==76) qs.set('min',String(FILT.min));
   if(FILT.ovn) qs.set('ovn','1');
   if(FILT.loc) qs.set('loc','1');
+  if(SHOW_WIND) qs.set('wind','1');
   const q=qs.toString();
   return '#'+tab+(q?('?'+q):'');
 }
@@ -881,6 +979,39 @@ function syncFiltUI(){
   const ovn=document.getElementById('filt-ovn'), loc=document.getElementById('filt-loc');
   if(ovn) ovn.setAttribute('aria-pressed',FILT.ovn?'true':'false');
   if(loc) loc.setAttribute('aria-pressed',FILT.loc?'true':'false');
+  syncWindUI();
+}
+function syncWindUI(){
+  document.querySelectorAll('#tog-wind, #map-wind').forEach(b=>{
+    if(!b)return;
+    b.setAttribute('aria-pressed', SHOW_WIND?'true':'false');
+    b.classList.toggle('on', SHOW_WIND);
+  });
+  const leg=document.getElementById('windleg');
+  if(leg) leg.hidden=!SHOW_WIND;
+}
+function setShowWind(on, opts){
+  SHOW_WIND=!!on;
+  saveFilt();
+  syncWindUI();
+  const tab=document.querySelector('#tablist [role=tab][aria-selected="true"]');
+  const name=tab?tab.dataset.tab:(tabFromHash());
+  if(!(opts&&opts.hash===false)){
+    const want=filtHash(name||'now');
+    if(location.hash!==want) history.replaceState(null,'',location.pathname+location.search+want);
+  }
+  renderWindArrow();
+  const now=document.getElementById('panel-now');
+  if(now&&!now.hidden) drawChart();
+}
+function bindWindControls(){
+  if(bindWindControls._bound)return;
+  bindWindControls._bound=true;
+  const onClick=()=>setShowWind(!SHOW_WIND);
+  const a=document.getElementById('tog-wind');
+  if(a) a.addEventListener('click', onClick);
+  const b=document.getElementById('map-wind');
+  if(b) b.addEventListener('click', onClick);
 }
 function applyFilt(redraw){
   saveFilt();
@@ -1145,7 +1276,7 @@ function bindTabs(){
     else if(e.key==='Home'){e.preventDefault();setTab(tabs[0].dataset.tab);tabs[0].focus()}
     else if(e.key==='End'){e.preventDefault();setTab(tabs[tabs.length-1].dataset.tab);tabs[tabs.length-1].focus()}
   });
-  addEventListener('hashchange',()=>{loadFilt();syncFiltUI();setTab(tabFromHash(),{hash:false});renderSpikes();const now=document.getElementById('panel-now');if(now&&!now.hidden)drawChart()});
+  addEventListener('hashchange',()=>{loadFilt();syncFiltUI();setTab(tabFromHash(),{hash:false});renderSpikes();renderWindArrow();const now=document.getElementById('panel-now');if(now&&!now.hidden)drawChart()});
 }
 function maybeTipFromURL(){
   const raw=P.get('tip');if(!raw)return;
@@ -1167,7 +1298,7 @@ async function load(first){
     try{
       const pts=DATA.sensors.filter(s=>s&&s.lat!=null&&s.lon!=null).map(s=>[s.lat,s.lon]).concat([[37.4936,-121.9446]]);
       const b=L.latLngBounds(pts);
-      const mob=innerWidth<640,op=+P.get('open')&&!mob;map.fitBounds(b,{paddingTopLeft:[mob?90:40,mob?260:op?400:250],paddingBottomRight:[mob?40:60,mob?90:innerWidth>=900?60:200]});
+      const mob=innerWidth<640,desk=innerWidth>=900,op=+P.get('open')&&!mob;map.fitBounds(b,{paddingTopLeft:[desk?640:mob?90:40,mob?260:op?400:250],paddingBottomRight:[desk?80:mob?40:60,mob?90:desk?80:200]});
     }catch(e){map.setView([37.4975,-121.9445],13)}
     const o=+P.get('open');if(o&&markers[o]){if(MOB())show(o);else{markers[o]._pinned=true;markers[o].openPopup()}}
   }else if(openId&&markers[openId])try{markers[openId].getPopup().update()}catch(e){}
@@ -1176,7 +1307,7 @@ document.getElementById('seg').onclick=e=>{const w=e.target.dataset&&e.target.da
 document.getElementById('pill').onclick=()=>{const m=markers[KEY];if(!m)return;if(MOB())show(KEY);else{m._pinned=true;m.openPopup()}};
 map.on('click',()=>{if(dockId)hide()});
 const sheet=document.getElementById('sheet');
-loadFilt();bindSpikeControls();syncFiltUI();bindTabs();
+addWindControl();loadFilt();bindSpikeControls();bindWindControls();syncFiltUI();bindTabs();
 if(location.hash || P.get('tip') || P.get('sheet')==='open'||(P.get('sheet')!=='closed'&&innerWidth>=640))sheet.classList.add('open');
 if(location.hash) setTab(tabFromHash(),{hash:false,open:true});
 document.getElementById('sh').onclick=()=>{sheet.classList.toggle('open'); if(sheet.classList.contains('open')) requestAnimationFrame(()=>drawChart())};

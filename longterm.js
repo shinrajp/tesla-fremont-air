@@ -5,7 +5,7 @@
     s:'School-area sensor',
     n:'Earlier nearby outdoor sensors',
     m:"Other sensors' median",
-    r:'Regulatory monitor, San Jose'
+    r:'BAAQMD Jackson St, San Jose'
   };
   const LT = {
     idx:null, rows:[], byYear:{}, ready:false,
@@ -123,7 +123,7 @@
         const a=s.first_daily||s.start, z=s.end||idx.end;
         return (s.label||s.id)+' ('+(a||'?')+' to '+(z||'now')+')';
       });
-      lead.textContent='Daily EPA-corrected AQI from 2020 through '+idx.end+'. School-area sensor from Oct 2026; earlier nearby outdoor sensors from Apr 2020; other-sensors median; San Jose regulatory monitor through 2024. Gaps are “no data,” not zeros. Not a claim that the facility caused a reading.';
+      lead.textContent='Daily EPA-corrected AQI from 2020 through '+idx.end+'. School-area sensor from Oct 2026; earlier nearby outdoor sensors from Apr 2020; other-sensors median; BAAQMD Jackson St, San Jose through 2024. Gaps are “no data,” not zeros. Not a claim that the facility caused a reading.';
     }
     const ser=document.getElementById('lt-series');
     if(ser && !ser.childElementCount){

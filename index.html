@@ -56,7 +56,7 @@
 *{box-sizing:border-box}html,body{margin:0;height:100%;font-family:var(--font);color:var(--fg);-webkit-font-smoothing:antialiased;-webkit-text-size-adjust:100%;text-size-adjust:100%}
 #map{position:fixed;inset:0;background:#eef0f3}
 .glass{background:var(--glass);backdrop-filter:saturate(1.6) blur(14px);-webkit-backdrop-filter:saturate(1.6) blur(14px);border:1px solid var(--bd);box-shadow:var(--sh);border-radius:var(--r)}
-#top{position:fixed;z-index:1000;top:calc(12px + env(safe-area-inset-top));left:12px;right:12px;display:flex;flex-wrap:wrap;align-items:flex-start;gap:6px 12px;padding:10px 14px;max-width:760px}
+#top{position:fixed;z-index:1000;top:calc(12px + env(safe-area-inset-top));left:12px;right:12px;display:flex;flex-wrap:wrap;align-items:flex-start;gap:6px 12px;padding:10px 14px;max-width:760px;overflow:hidden}
 #top h1{font-size:17px;line-height:1.15;margin:0;font-weight:700;letter-spacing:-.01em}
 #top .blurb{font-size:12.5px;line-height:1.4;color:#374151;margin:5px 0 0}
 #top .blurb b{color:var(--fg);font-weight:650}
@@ -68,7 +68,7 @@
 #pill .lab b{display:block;font-size:12px;color:var(--fg)}
 #pill .pill-vals{display:flex;align-items:center;gap:6px;flex:none}
 #pill .num{min-width:40px;height:32px;border-radius:999px;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:17px;padding:0 9px;font-variant-numeric:tabular-nums}
-#pill .pill-epa{font-size:10px;line-height:1.2;color:#374151;text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums;max-width:11.5em}
+#pill .pill-epa{font-size:10px;line-height:1.2;color:#374151;text-align:right;white-space:normal;font-variant-numeric:tabular-nums;max-width:16em}
 .seg{display:inline-flex;background:#f3f4f6;border-radius:10px;padding:3px;gap:2px}
 .seg button{border:0;background:transparent;font:600 12px var(--font);color:#4b5563;padding:6px 10px;border-radius:8px;cursor:pointer;white-space:nowrap}
 .seg button.on{background:#fff;color:var(--fg);box-shadow:0 1px 3px rgba(0,0,0,.12)}
@@ -114,7 +114,7 @@
 #dock.on{display:block}#dock .x{position:absolute;top:10px;right:10px;width:28px;height:28px;border-radius:50%;background:rgba(0,0,0,.12);border:0;font:600 18px var(--font);color:inherit;cursor:pointer}
 body.docked #sheet{display:none}
 #sheet{position:fixed;z-index:1000;left:12px;right:12px;bottom:calc(12px + env(safe-area-inset-bottom));max-width:760px;padding:0;overflow:hidden}
-#sh{display:flex;align-items:center;gap:10px;padding:10px 14px;cursor:pointer;user-select:none}
+#sh{display:flex;align-items:center;gap:10px;padding:8px 14px;cursor:pointer;user-select:none}
 #sh .chev{width:22px;height:22px;border-radius:50%;background:#f3f4f6;display:flex;align-items:center;justify-content:center;transition:transform .2s;flex:none}
 #sheet.open #sh .chev{transform:rotate(180deg)}
 #sh .tt{font-size:13px;font-weight:700;white-space:nowrap}
@@ -125,7 +125,7 @@ body.docked #sheet{display:none}
 #sb{display:none;padding:0 10px 10px}
 #sheet.open #sb{display:block}
 #evchart{position:relative;width:100%;height:min(210px,30vh);touch-action:pan-y;-webkit-user-select:none;user-select:none;cursor:crosshair}
-#evchart #chart,#chart{width:100%;height:100%;display:block;overflow:visible}
+#evchart #evsvg,#evsvg{width:100%;height:100%;display:block;overflow:visible}
 #bursts{margin-top:10px;padding:8px 4px 0;border-top:1px solid var(--bd)}
 #bursts h3{margin:0 0 4px;font-size:13px;font-weight:700}
 #bursts .empty,#bursts p{margin:0;font-size:12px;color:var(--mut);line-height:1.4}
@@ -156,9 +156,9 @@ body.docked #sheet{display:none}
 @media (min-width:2000px){#top{zoom:1.4}#sheet{zoom:1.4}.card .leaflet-popup-content-wrapper{zoom:1.35}}
 
 #sheet{display:flex;flex-direction:column;max-height:min(80vh,760px)}
-#sb{overflow:auto;-webkit-overflow-scrolling:touch;padding:0 12px 12px;overscroll-behavior:contain}
+#sb{overflow:auto;-webkit-overflow-scrolling:touch;padding:0 12px calc(18px + env(safe-area-inset-bottom,0px));overscroll-behavior:contain}
 #evchart{position:relative;width:100%;height:min(220px,32vh);touch-action:pan-y;-webkit-user-select:none;user-select:none;cursor:crosshair}
-#evchart #chart,#chart{width:100%;height:100%;display:block;overflow:visible}
+#evchart #evsvg,#evsvg{width:100%;height:100%;display:block;overflow:visible}
 .block{margin-top:12px;padding-top:10px;border-top:1px solid var(--bd)}
 .block h3{margin:0 0 6px;font-size:13.5px;font-weight:750;letter-spacing:-.01em}
 .block p,.block li{font-size:12.5px;line-height:1.45;color:#374151;margin:0 0 6px}
@@ -185,7 +185,7 @@ body.docked #sheet{display:none}
 .wind-arrow{width:36px;height:36px;display:flex;align-items:center;justify-content:center;filter:drop-shadow(0 1px 2px rgba(0,0,0,.35))}
 .wind-arrow i{width:0;height:0;border-left:7px solid transparent;border-right:7px solid transparent;border-bottom:22px solid #14532d}
 @media (max-width:640px){
-  #sheet{max-height:min(50vh,680px)}
+  #sheet{max-height:min(54vh,680px)}
   #sh .tt{font-size:12px}
 }
 
@@ -226,7 +226,7 @@ a.palink{color:#111827;font-weight:650;text-decoration:underline;text-underline-
 #spikes .ep .src{margin-top:3px;font-size:11.5px}
 #evchart{overflow:visible;scroll-margin-top:12px}
 @media (max-width:640px){
-  #sheet{max-height:min(50vh,680px)}
+  #sheet{max-height:min(54vh,680px)}
   #evchart{height:min(218px,32vh)}
 }
 
@@ -243,7 +243,7 @@ a.palink{color:#111827;font-weight:650;text-decoration:underline;text-underline-
 #sensorlist li{padding:7px 0;border-bottom:1px solid var(--bd);font-size:12.5px;line-height:1.4}
 #sensorlist li:last-child{border-bottom:0}
 #methods p{margin:0 0 8px}
-#sh .tt{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#sh .tt{white-space:normal;line-height:1.25;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
 
 .spikefilt{display:flex;flex-wrap:wrap;align-items:center;gap:6px 8px;margin:8px 0}
 .spikefilt .tog{display:flex;align-items:center;gap:6px;font:650 12.5px var(--font);color:#111827}
@@ -389,11 +389,12 @@ html.hdr-compact #top .blurb{display:none}
 html.hdr-compact #blurb-tog{display:inline-block}
 @media (max-width:640px){
   #langsw button{padding:3px 5px;min-height:26px;font-size:10.5px}
-  #sheet{max-height:min(50vh,680px)}
+  #sheet{max-height:min(54vh,680px)}
   #pill .pill-vals{flex-direction:column;align-items:flex-end;gap:1px}
-  #pill .pill-epa{font-size:9.5px;white-space:normal;max-width:9.8em;text-align:right}
-  body.sheet-open .leaflet-bottom{bottom:calc(min(50vh,680px) + 24px + env(safe-area-inset-bottom));transition:bottom .2s}
-  body.sheet-open .leaflet-control-attribution{margin:0;padding-bottom:2px}
+  #pill .pill-epa{font-size:9.5px;white-space:normal;max-width:10.5em;text-align:right}
+  body.sheet-open .leaflet-bottom{top:var(--attr-top, 160px);bottom:auto;left:10px;transition:top .2s}
+  .leaflet-control-attribution{white-space:normal;max-width:min(200px,62vw);line-height:1.25;padding:2px 6px!important;border-radius:6px!important}
+  body.sheet-open .leaflet-control-attribution{margin:0}
 }
 @media (min-width:641px){
   html.hdr-compact #blurb-tog{display:inline-block}
@@ -441,15 +442,11 @@ details.day>summary .daysum{margin:0;font:500 12px var(--font);color:#4b5563;lin
   </div>
   <div id="sb">
     <div id="panel-now" class="panel on" role="tabpanel" aria-labelledby="tab-now">
-      <div id="todaycard" class="todaycard"></div>
       <div id="nowglance" class="nowglance"></div>
+      <div id="todaycard" class="todaycard"></div>
     </div>
     <div id="panel-chart" class="panel" role="tabpanel" aria-labelledby="tab-chart" hidden>
       <div id="nowbox" class="block" style="border-top:0;margin-top:0;padding-top:4px"></div>
-      <div id="aqi-guide" class="block">
-        <div id="legchips"></div>
-        <p id="kidmsg" data-i18n="aqiScaleNote">AQI colors follow the U.S. EPA scale. Advice is for children, in plain language.</p>
-      </div>
       <div class="block" id="evblock">
         <div class="evhead">
           <h3 data-i18n="last7">Last 7 days</h3>
@@ -461,8 +458,12 @@ details.day>summary .daysum{margin:0;font:500 12px var(--font);color:#4b5563;lin
         <div id="windhelp-chart" class="wind-help" hidden></div>
         <p class="muted" id="evcap" data-i18n="evcap">School-area sensor, 10-minute raw AQI. Overnight hours (10 PM–6 AM PT) are shaded gray. The headline number is the current 1-hour AQI.</p>
         <p class="muted" id="windleg" hidden data-i18n="windleg">Arrows point where the wind is going; size and color show speed. Light green marks hours when the wind came from the facility direction.</p>
+        <div id="aqi-guide" class="block">
+          <div id="legchips"></div>
+          <p id="kidmsg" data-i18n="aqiScaleNote">AQI colors follow the U.S. EPA scale. Advice is for children, in plain language.</p>
+        </div>
         <div id="evchart" role="img" data-i18n-aria="chartAria" aria-label="Seven-day school-area AQI chart">
-          <svg id="chart"></svg>
+          <svg id="evsvg"></svg>
           <div id="evhair" hidden></div>
           <div id="evfollow" hidden><span id="evdotlab" hidden></span></div>
           <div id="evtip" class="evtip" hidden></div>
@@ -612,9 +613,11 @@ function windLineText(w){
   const toward=yn===true?tr('towardYes'):yn===false?tr('towardNo'):tr('windTooLight');
   let line=tr('windLine',{mph, dir, toward});
   const pos=w.school_position;
-  if(pos==='upwind') line+=' '+tr('schoolUpwind');
-  else if(pos==='downwind') line+=' '+tr('schoolDownwind');
-  else if(yn==null) line+=' '+tr('schoolNeither');
+  const extra=pos==='upwind'?tr('schoolUpwind'):pos==='downwind'?tr('schoolDownwind'):(yn==null?tr('schoolNeither'):'');
+  if(extra){
+    if(!/[.!?。！？]$/.test(line.trim())) line += (/^zh/.test((window.I18N&&I18N.lang)||'')?'。':'.');
+    line += ' '+extra;
+  }
   return line;
 }
 function towardFlag(yn, available){
@@ -650,7 +653,18 @@ function catChipText(m){
 }
 function syncSheetOpen(){
   const sh=document.getElementById('sheet');
-  document.body.classList.toggle('sheet-open', !!(sh && sh.classList.contains('open')));
+  const open=!!(sh && sh.classList.contains('open'));
+  document.body.classList.toggle('sheet-open', open);
+  if(open && sh){
+    const top=sh.getBoundingClientRect().top;
+    const lift=Math.max(48, Math.round(window.innerHeight - top + 16));
+    document.body.style.setProperty('--sheet-stack', lift+'px');
+    const hd=document.getElementById('top');
+    if(hd) document.body.style.setProperty('--attr-top', Math.round(hd.getBoundingClientRect().bottom+8)+'px');
+  } else {
+    document.body.style.removeProperty('--sheet-stack');
+    document.body.style.removeProperty('--attr-top');
+  }
 }
 function initHeaderCompact(){
   const btn=document.getElementById('blurb-tog');
@@ -718,7 +732,7 @@ function hide(){dockId=null;document.getElementById('dock').classList.remove('on
 let DATA=null,HIST=null,markers={},openId=null,hoverT=null,legPick=null;
 const map=L.map('map',{zoomControl:false,attributionControl:true,zoomSnap:.5,maxZoom:16});
 L.control.zoom({position:'bottomright'}).addTo(map);
-map.attributionControl.setPrefix('Data: <a href="https://map.purpleair.com/" target=_blank rel="noopener">PurpleAir.com</a> public sensors (raw on map)');
+map.attributionControl.setPrefix('Data: <a href="https://map.purpleair.com/" target=_blank rel="noopener">PurpleAir.com</a>');
 const ESRI='https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/';
 const base=L.tileLayer(ESRI+'World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}',{maxZoom:16,attribution:'© Esri, HERE, Garmin, OpenStreetMap'});
 base.addTo(map);
@@ -887,7 +901,7 @@ function renderNow(){
     const flag=towardFlag(yn, w.available);
     const pflag=pat.kind==='localized'?'<span class="flag warn">'+tr('flagLocalized')+'</span>':pat.kind==='area-wide'?'<span class="flag warn">'+tr('flagAreaWide')+'</span>':pat.kind==='similar'?'<span class="flag no">'+tr('flagSimilar')+'</span>':'';
     box.innerHTML=`<h3>${tr('localizedVs')}</h3>
-      <div>${flag}${pflag}</div>
+      <div class="nowbox-flags">${flag} ${pflag}</div>
       <p class="row2">${esc(windLineText(w))} ${esc(placesText(pl))}</p>
       <p>${esc(patternText(pat))}</p>`;
   }
@@ -1090,7 +1104,7 @@ function renderSensorNote(){
 function placeFollow(p, opts){
   const park=!!(opts&&opts.park);
   const tip=document.getElementById('evtip'),hair=document.getElementById('evhair');
-  const svg=document.getElementById('chart'),box=document.getElementById('evchart');
+  const svg=document.getElementById('evsvg'),box=document.getElementById('evchart');
   const dot=document.getElementById('evfollow'),lab=document.getElementById('evdotlab');
   if(!svg||!box||!EV.X||!p)return;
   const rec=svg.getBoundingClientRect(),br=box.getBoundingClientRect();
@@ -1120,7 +1134,7 @@ function placeFollow(p, opts){
       lab.hidden=true;
     }
   }
-  document.querySelectorAll('#chart .evpeak').forEach(el=>{
+  document.querySelectorAll('#evsvg .evpeak').forEach(el=>{
     el.classList.toggle('on', +el.getAttribute('data-t')===p.t);
   });
   if(park){
@@ -1192,7 +1206,7 @@ function bindChart(){
   const THRESH=8;
   const pos=e=>{
     const ev=(e.touches&&e.touches[0])||e;
-    const svg=document.getElementById('chart');if(!svg||!EV.X)return;
+    const svg=document.getElementById('evsvg');if(!svg||!EV.X)return;
     const rec=svg.getBoundingClientRect();
     const x=(ev.clientX-rec.left)*(EV.w/rec.width);
     showTip(nearestX(x),false);
@@ -1243,7 +1257,7 @@ function scheduleDrawChart(){
   requestAnimationFrame(()=>requestAnimationFrame(go));
 }
 function drawChart(){
-  const svg=document.getElementById('chart');
+  const svg=document.getElementById('evsvg');
   const panel=document.getElementById('panel-chart');
   if(!svg||!document.getElementById('sheet').classList.contains('open'))return;
   if(panel&&panel.hidden)return;
@@ -1648,11 +1662,16 @@ function shortDay(iso){
   if(!iso) return '';
   const [y,m,d]=iso.split('-').map(Number);
   const dt=new Date(Date.UTC(y,m-1,d,20));
+  const lang=(window.I18N&&I18N.lang)||'en';
+  if(String(lang).startsWith('zh')){
+    const wd=new Intl.DateTimeFormat(locName(),{weekday:'short',timeZone:'UTC'}).format(dt);
+    const mo=(window.I18N&&I18N.month)?I18N.month(String(m).padStart(2,'0')):(m+'月');
+    return wd+mo+d+'日';
+  }
   const parts=new Intl.DateTimeFormat(locName(),{weekday:'short',month:'short',day:'numeric',timeZone:'UTC'}).formatToParts(dt);
   const wd=(parts.find(x=>x.type==='weekday')||{}).value||'';
   const mo=(parts.find(x=>x.type==='month')||{}).value||'';
   const day=(parts.find(x=>x.type==='day')||{}).value||String(d);
-  if((I18N.lang||'en').startsWith('zh')) return wd+mo+day+'日';
   return wd+' '+mo+' '+day;
 }
 function shortTimeFromPt(pt){
@@ -1695,7 +1714,7 @@ function weekLine(days, week){
   let line=tr('weekHead',{n, word});
   line+=', '+tr('weekBits',{ovn, loc});
   if(wfKnown) line+=', '+tr('weekWind',{yes:wfYes, known:wfKnown, pct:pct??'–'});
-  if(worst) line+=' '+tr('worstPeak',{aqi:worst.peak, day:shortDay(worstDate), time:shortTimeFromPt(worst.peak_pt)});
+  if(worst){ if(line && !/[.。!?]$/.test(line.trim())) line+='.'; line+=' '+tr('worstPeak',{aqi:worst.peak, day:shortDay(worstDate), time:shortTimeFromPt(worst.peak_pt)}); }
   else line+=' '+tr('noFlaggedWeek');
   const filtered=!(FILT.sus&&FILT.min===76&&!FILT.ovn&&!FILT.loc);
   if(filtered) line+=' '+tr('filteredView');
@@ -1768,7 +1787,7 @@ function renderWindRose(){
   const lightBit=pack=>pack.light_pct?tr('roseLightBit',{pct:pack.light_pct}):'';
   const sub=(pack,name)=>`<div class="sub">${name}</div><p class="meta">${tr('roseMeta',{n:pack.n||0, pct:pack.from_facility_pct||0, light:lightBit(pack)})}</p>`;
   const x=sp.from_facility_pct||0, y=low.from_facility_pct||0;
-  el.innerHTML=`<p id="roselead">${tr('roseLead',{x,y})}<span class="caveat">${tr('roseCaveat')}</span></p>
+  el.innerHTML=`<p id="roselead">${tr('roseLead',{x,y})} <span class="caveat">${tr('roseCaveat')}</span></p>
     <div class="wr-title">${tr('roseTitle')}</div>
     <div class="pair">
       <div class="col">${roseSVG(sp,{color:'#c2410c',maxPct,facDeg:fac,label:tr('roseSpikes')})}${sub(sp,tr('roseSpikes'))}</div>
@@ -1890,7 +1909,18 @@ function setTab(name, opts){
     const want=filtHash(name);
     if(location.hash!==want) history.replaceState(null,'',location.pathname+location.search+want);
   }
-  if(name==='chart') scheduleDrawChart();
+  if(name==='chart'){
+    scheduleDrawChart();
+    const alignGuide=()=>{
+      const sb=document.getElementById('sb');
+      const guide=document.getElementById('legchips')||document.getElementById('aqi-guide');
+      if(!sb||!guide) return;
+      const delta=guide.getBoundingClientRect().top-sb.getBoundingClientRect().top-6;
+      sb.scrollTop=Math.max(0,sb.scrollTop+delta);
+    };
+    requestAnimationFrame(()=>requestAnimationFrame(alignGuide));
+    setTimeout(alignGuide,250);
+  }
 }
 function bindTabs(){
   const list=document.getElementById('tablist'); if(!list||list._bound)return;
@@ -1946,7 +1976,8 @@ if(location.hash || P.get('tip') || P.get('sheet')==='open'||(P.get('sheet')!=='
 syncSheetOpen();
 if(location.hash) setTab(tabFromHash(),{hash:false,open:true});
 document.getElementById('sh').onclick=()=>{sheet.classList.toggle('open'); syncSheetOpen(); if(sheet.classList.contains('open')) scheduleDrawChart()};
-addEventListener('resize',()=>{if(sheet.classList.contains('open')) scheduleDrawChart()});
+addEventListener('resize',()=>{syncSheetOpen(); if(sheet.classList.contains('open')) scheduleDrawChart()});
+(function(){const sh=document.getElementById('sheet'); if(sh) sh.addEventListener('transitionend',syncSheetOpen);})();
 load(true).then(()=>{ if(P.get('tip')) maybeTipFromURL(); else if(location.hash) setTab(tabFromHash(),{hash:false}); });setInterval(load,5*60*1000);
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)load()});
 </script>

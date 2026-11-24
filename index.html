@@ -230,6 +230,17 @@ details.day>summary::before, details.sect>summary::before{content:'▸';display:
 details.day[open]>summary::before, details.sect[open]>summary::before{content:'▾'}
 details.day .day-body, details.sect .sect-body{padding:0 12px 8px}
 details.sect>summary{font-size:13.5px}
+
+.windrose{margin:0 0 18px}
+.windrose .wr-title{font:750 12.5px var(--font);color:#111827;margin:0 0 2px}
+.windrose .pair{display:flex;gap:6px;justify-content:center;align-items:flex-start}
+.windrose .col{flex:1;min-width:0;text-align:center}
+.windrose svg{width:100%;max-width:156px;height:auto;display:block;margin:0 auto}
+.windrose .sub{font:650 12px var(--font);color:#111827;margin:2px 0 0;line-height:1.25}
+.windrose .meta{font:500 11px var(--font);color:#4b5563;margin:1px 0 0;line-height:1.3}
+.windrose .cap{font:500 11.5px var(--font);color:#4b5563;margin:4px 0 0;line-height:1.3}
+#filthint{font-size:11.5px;margin:2px 0 6px;line-height:1.3}
+#spikedef{margin:0 0 6px}
 </style>
 </head>
 <body>
@@ -291,6 +302,7 @@ details.sect>summary{font-size:13.5px}
         </div>
         <p class="muted" id="filthint">“Suspicious only” also keeps official jump episodes (a rise of 35 or more) even if the peak is below the AQI threshold.</p>
         <div id="spikesum" class="spikesum"></div>
+        <div id="windrose" class="windrose" hidden></div>
         <div class="sect-tools"><button type="button" id="spk-expand">Expand all</button><button type="button" id="spk-collapse">Collapse all</button></div>
         <div id="spikelist"></div>
       </div>
@@ -939,6 +951,81 @@ function weekLine(days, week){
   if(filtered) line+=' (filtered view)';
   return line;
 }
+
+function roseWedgePath(cx,cy,r,a0,a1){
+  const p=(deg)=>{const a=deg*Math.PI/180;return [cx+r*Math.sin(a), cy-r*Math.cos(a)]};
+  const [x0,y0]=p(a0),[x1,y1]=p(a1);
+  return `M${cx.toFixed(1)},${cy.toFixed(1)} L${x0.toFixed(1)},${y0.toFixed(1)} L${x1.toFixed(1)},${y1.toFixed(1)} Z`;
+}
+function roseSVG(pack, opts){
+  const W=156,H=132,cx=78,cy=66,R=50;
+  const maxPct=Math.max(opts.maxPct||1, 1);
+  const pct=pack.pct||[];
+  let petals='';
+  for(let i=0;i<16;i++){
+    const v=pct[i]||0;
+    const r=R*(v/maxPct);
+    if(r<1.2) continue;
+    petals+=`<path d="${roseWedgePath(cx,cy,r,i*22.5-11.25,i*22.5+11.25)}" fill="${opts.color}" fill-opacity=".88"/>`;
+  }
+  const rings=[0.5,1].map(f=>`<circle cx="${cx}" cy="${cy}" r="${(R*f).toFixed(1)}" fill="none" stroke="#d1d5db" stroke-width="0.8"/>`).join('');
+  const axes=[[0,'N'],[90,'E'],[180,'S'],[270,'W']].map(([d,lab])=>{
+    const rad=d*Math.PI/180, x2=cx+(R+2)*Math.sin(rad), y2=cy-(R+2)*Math.cos(rad);
+    const lx=cx+(R+12)*Math.sin(rad), ly=cy-(R+12)*Math.cos(rad);
+    return `<line x1="${cx}" y1="${cy}" x2="${x2.toFixed(1)}" y2="${y2.toFixed(1)}" stroke="#e5e7eb" stroke-width="0.8"/>`+
+           `<text x="${lx.toFixed(1)}" y="${(ly+3).toFixed(1)}" text-anchor="middle" font-size="10" font-weight="700" fill="#374151">${lab}</text>`;
+  }).join('');
+  const fac=opts.facDeg, fr=R+4, a=fac*Math.PI/180;
+  const fx=cx+fr*Math.sin(a), fy=cy-fr*Math.cos(a);
+  const nx=Math.sin(a), ny=-Math.cos(a);
+  const px=-ny, py=nx;
+  const ah=7, aw=3.6;
+  const hx=fx-nx*ah, hy=fy-ny*ah;
+  const arrow=`<line x1="${cx}" y1="${cy}" x2="${fx.toFixed(1)}" y2="${fy.toFixed(1)}" stroke="#14532d" stroke-width="1.6"/>`+
+    `<polygon points="${fx.toFixed(1)},${fy.toFixed(1)} ${(hx+px*aw).toFixed(1)},${(hy+py*aw).toFixed(1)} ${(hx-px*aw).toFixed(1)},${(hy-py*aw).toFixed(1)}" fill="#14532d"/>`;
+  return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${opts.label}"><title>${opts.label}</title><circle cx="${cx}" cy="${cy}" r="${R}" fill="#f8fafc"/>${rings}${axes}${petals}${arrow}<circle cx="${cx}" cy="${cy}" r="2.2" fill="#111827"/></svg>`;
+}
+function computeWindRose(points){
+  const fac=176;
+  const spike=[], low=[];
+  for(const p of (points||[])){
+    if(p.from_deg==null) continue;
+    if(p.suspicious) spike.push(p);
+    else if((p.aqi||0)<50) low.push(p);
+  }
+  const pack=rows=>{
+    const counts=Array(16).fill(0); let light=0, facN=0;
+    for(const p of rows){
+      counts[Math.floor((p.from_deg+11.25)%360/22.5)]+=1;
+      if(p.calm || (p.mph!=null && p.mph<4)) light+=1;
+      if(p.from_facility===true) facN+=1;
+    }
+    const n=rows.length;
+    return {n, light, light_pct:n?Math.round(100*light/n):0, from_facility:facN, from_facility_pct:n?Math.round(100*facN/n):0,
+      counts, pct:counts.map(c=>n?Math.round(1000*c/n)/10:0)};
+  };
+  return {facility_from_deg:fac, facility_from_compass:'S', spikes:pack(spike), low:pack(low),
+    caption:"Correlation only — this is not a claim of cause. Green mark: wind from the facility (176°, S)."};
+}
+function renderWindRose(){
+  const el=document.getElementById('windrose'); if(!el)return;
+  const rec=evSpikes();
+  let rose=rec&&rec.wind_rose;
+  if(!rose || !rose.spikes) rose=computeWindRose(evPoints());
+  const sp=rose.spikes||{}, low=rose.low||{};
+  if(!sp.n && !low.n){el.hidden=true;el.innerHTML='';return}
+  const maxPct=Math.max(10, ...((sp.pct||[]).concat(low.pct||[])));
+  const fac=rose.facility_from_deg!=null?rose.facility_from_deg:176;
+  const sub=(pack,name)=>`<div class="sub">${name}</div><p class="meta">${pack.n||0} readings · ${pack.from_facility_pct||0}% from facility${pack.light_pct?` · ${pack.light_pct}% light wind`:''}</p>`;
+  el.innerHTML=`<div class="wr-title">Wind during spikes vs lower-AQI hours</div>
+    <div class="pair">
+      <div class="col">${roseSVG(sp,{color:'#c2410c',maxPct,facDeg:fac,label:'Wind direction during suspicious spikes'})}${sub(sp,'Suspicious spikes')}</div>
+      <div class="col">${roseSVG(low,{color:'#64748b',maxPct,facDeg:fac,label:'Wind direction during lower-AQI hours'})}${sub(low,'AQI under 50')}</div>
+    </div>
+    <p class="cap">${rose.caption||''}</p>`;
+  el.hidden=false;
+}
+
 function renderSpikes(){
   const box=document.getElementById('spikelist');if(!box)return;
   const rec=evSpikes();
@@ -947,6 +1034,7 @@ function renderSpikes(){
   const days=(rec.days||[]).map(d=>({...d, _visible:(d.episodes||[]).filter(episodeVisible)}));
   const sum=document.getElementById('spikesum');
   if(sum) sum.textContent=weekLine(days, rec.week);
+  renderWindRose();
   if(!days.length){box.innerHTML='<p class="empty">Spike highlights will appear after the next data update.</p>';return}
   const openDates=new Set([...box.querySelectorAll('details.day[open]')].map(el=>el.getAttribute('data-date')));
   const firstRender=!box.querySelector('details.day');

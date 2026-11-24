@@ -793,6 +793,16 @@ function refreshI18n(){
   if(typeof scheduleDrawChart==='function') scheduleDrawChart();
   if(window.refreshLongterm) window.refreshLongterm();
   initHeaderCompact();
+  // buttons whose label depends on state or that are built outside the static markup
+  if(typeof syncWindUI==='function') syncWindUI();
+  if(typeof syncCoverageUI==='function') syncCoverageUI();
+  syncMapControlsI18n();
+}
+function syncMapControlsI18n(){
+  [['.leaflet-control-zoom-in','zoomIn'],['.leaflet-control-zoom-out','zoomOut']].forEach(([sel,k])=>{
+    const a=document.querySelector(sel); if(!a) return;
+    a.title=tr(k); a.setAttribute('aria-label',tr(k));
+  });
 }
 
 const P=new URLSearchParams(location.search);
@@ -811,6 +821,7 @@ function hide(){dockId=null;document.getElementById('dock').classList.remove('on
 let DATA=null,HIST=null,markers={},openId=null,hoverT=null,legPick=null;
 const map=L.map('map',{zoomControl:false,attributionControl:true,zoomSnap:.5,maxZoom:16});
 L.control.zoom({position:'bottomright'}).addTo(map);
+syncMapControlsI18n();
 map.attributionControl.setPrefix('Data: <a href="https://map.purpleair.com/" target=_blank rel="noopener">PurpleAir.com</a>');
 const ESRI='https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/';
 const base=L.tileLayer(ESRI+'World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}',{maxZoom:16,attribution:'© Esri, HERE, Garmin, OpenStreetMap'});

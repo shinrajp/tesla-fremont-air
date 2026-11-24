@@ -392,7 +392,6 @@ html.hdr-compact #blurb-tog{display:inline-block}
   #sheet{max-height:min(54vh,680px)}
   #pill .pill-vals{flex-direction:column;align-items:flex-end;gap:1px}
   #pill .pill-epa{font-size:9.5px;white-space:normal;max-width:10.5em;text-align:right}
-  body.sheet-open .leaflet-bottom{top:var(--attr-top, 160px);bottom:auto;left:10px;transition:top .2s}
   .leaflet-control-attribution{white-space:normal;max-width:min(200px,62vw);line-height:1.25;padding:2px 6px!important;border-radius:6px!important}
   body.sheet-open .leaflet-control-attribution{margin:0}
 }
@@ -405,7 +404,51 @@ details.day>summary .sum-body, details.sect>summary .sum-body{min-width:0;flex:1
 details.day>summary .daysum{margin:0;font:500 12px var(--font);color:#4b5563;line-height:1.4}
 #roselead{font:500 13px/1.45 var(--font);color:#111827;margin:0 0 8px}
 #roselead .caveat{display:block;margin-top:4px;font:500 12px/1.4 var(--font);color:#6b7280}
+.day-empty{border:1px solid var(--bd);border-radius:12px;margin:0 0 8px;background:#fff;padding:8px 12px 8px 30px}
+.day-empty .daysum{margin:0;font:500 12px var(--font);color:#6b7280;line-height:1.4}
 .now-aqi-epa{font:500 12.5px/1.3 var(--font);color:#374151;margin-top:4px}
+/* readable body size for long explanatory paragraphs */
+#spikedef,#methods p{font-size:12.5px;line-height:1.45}
+/* header pill: label never breaks mid-word; short sub-line on phones */
+#pill .lab b{white-space:nowrap}
+.seg .seg-lab{align-self:center;font:650 11px var(--font);color:#6b7280;padding:0 4px 0 6px;white-space:nowrap}
+/* keep the briefing panel below the header on every screen */
+@media (min-width:641px){
+  #top .grow{flex:1 1 100%}
+  #top .controls{margin-left:0}
+  #sheet{max-height:min(80vh,760px,var(--sheet-max,100vh))}
+}
+@media (max-width:640px){
+  #sheet{max-height:min(54vh,680px,var(--sheet-max,100vh))}
+  #pill .pill-epa{display:none}
+  .seg .seg-lab{padding:0 2px 0 4px;font-size:10.5px}
+  #top .seg button{padding:6px 4px}
+  .leaflet-bottom{bottom:var(--sheet-stack,0px);transition:bottom .2s}
+}
+@media (max-width:380px){
+  #pill{padding:4px 5px 4px 8px;gap:5px}
+  #pill .num{min-width:34px;padding:0 6px;font-size:16px}
+  #pill .lab b{font-size:10.5px}
+  .seg .seg-lab{padding:0 1px 0 3px;font-size:10px}
+  #top .seg button{padding:6px 3px;font-size:11.5px}
+}
+/* sensor coverage */
+.now-cov{font:500 12.5px/1.4 var(--font);color:#374151;margin:-4px 0 10px;text-align:center}
+#coverage{margin-top:12px;padding-top:10px;border-top:1px solid var(--bd)}
+#coverage h3{margin:0 0 6px;font-size:13.5px;font-weight:750}
+#coverage p{font-size:12.5px;line-height:1.45;color:#374151;margin:0 0 8px}
+#coverage p.muted{color:#6b7280;font-size:12px}
+.covbar{display:flex;height:14px;border-radius:7px;overflow:hidden;margin:4px 0 8px;background:#f3f4f6}
+.covbar i{display:block;height:100%}
+.covleg{list-style:none;margin:0 0 8px;padding:0}
+.covleg li{display:flex;align-items:center;gap:8px;font-size:12.5px;line-height:1.35;color:#374151;padding:2px 0}
+.covleg li i{width:12px;height:12px;border-radius:3px;flex:none}
+.covleg li b{margin-left:auto;font-variant-numeric:tabular-nums;white-space:nowrap}
+.cov-near{background:#16a34a}.cov-far{background:#94a3b8}.cov-none{background:#dc2626}.cov-light{background:#e5e7eb;box-shadow:inset 0 0 0 1px #d1d5db}
+#cov-map,#map-cov{min-height:32px}
+.cov-lab{font:650 11px/1.2 var(--font);color:#7f1d1d;background:rgba(255,255,255,.9);border:1px solid #fecaca;border-radius:6px;padding:2px 6px;white-space:nowrap;transform:translate(-50%,-50%);display:inline-block}
+.cov-note{font-size:11.5px;line-height:1.35;color:#374151;margin-top:6px;max-width:220px}
+#sensorlist .covintro{margin:0 0 8px;font-size:12.5px;line-height:1.45;color:#374151}
 </style>
 <script src="i18n.js"></script>
 </head>
@@ -425,7 +468,7 @@ details.day>summary .daysum{margin:0;font:500 12px var(--font);color:#4b5563;lin
     <div class="sub" id="upd" data-i18n="loading">Loading live readings…</div>
   </div>
   <div class="controls">
-    <div class="seg" id="seg"><button data-w="10minute" data-i18n="segNow">10 min</button><button data-w="60minute" class="on" data-i18n="seg1hr">1 hr</button><button data-w="24hour" data-i18n="seg24hr">24 hr</button></div>
+    <div class="seg" id="seg" role="group" data-i18n-aria="mapShowsAria" aria-label="Average shown on the map and sensor cards"><span class="seg-lab" data-i18n="mapShows" aria-hidden="true">Map:</span><button data-w="10minute" data-i18n="segNow">10 min</button><button data-w="60minute" class="on" data-i18n="seg1hr">1 hr</button><button data-w="24hour" data-i18n="seg24hr">24 hr</button></div>
     <button id="pill" data-i18n-title="pillTitle" title="Open the school-area sensor next to Lila Bringhurst &amp; Innovation"><span class="lab"><b data-i18n="byTheSchool">By the school</b><span id="pilll">1-hr AQI</span></span><span class="pill-vals"><span class="num" id="pilln">–</span><span class="pill-epa" id="pillepa"></span></span></button>
   </div>
 </div>
@@ -518,6 +561,7 @@ details.day>summary .daysum{margin:0;font:500 12px var(--font);color:#4b5563;lin
         <p class="muted" id="filthint" data-i18n="filtHint">“Flagged only” also keeps official jump episodes (a rise of 35 or more) even if the peak is below the AQI threshold.</p>
         <div id="spikesum" class="spikesum"></div>
         <div id="windrose" class="windrose" hidden></div>
+        <div id="coverage" hidden></div>
         <div class="sect-tools"><button type="button" id="spk-expand" data-i18n="expandAll">Expand all</button><button type="button" id="spk-collapse" data-i18n="collapseAll">Collapse all</button></div>
         <div id="spikelist"></div>
       </div>
@@ -532,6 +576,7 @@ details.day>summary .daysum{margin:0;font:500 12px var(--font);color:#4b5563;lin
       <details class="sect" id="sect-methods" open><summary data-i18n="howShown">How readings are shown</summary>
         <div class="sect-body" id="methods">
         <p data-i18n="methodsP1">Map numbers are raw PurpleAir readings (the same as the PurpleAir map’s raw view). Each sensor card also shows an EPA-corrected AQI, an official adjustment that often reads a bit lower. Alerts and group-post thresholds use the raw 1-hour value. 10-minute short bursts are flagged for review only and do not by themselves trigger a group post.</p>
+        <p id="methods3"></p>
         <p class="muted" data-i18n="methodsP2">WHO 2021 guideline (reference only): 15 µg/m³ 24-hour, 5 µg/m³ annual. Sources: PurpleAir.com public sensors; U.S. EPA PM2.5 AQI; wind from Open-Meteo. This page does not claim the facility caused a given reading.</p>
         </div>
       </details>
@@ -605,13 +650,23 @@ function placesText(pl){
     innDir:compassLabel(inn.bearing_compass||'')
   });
 }
+function isLightWind(w){
+  if(!w) return false;
+  const calm=(w.calm_mph!=null?w.calm_mph:4);
+  return !!w.calm || (w.mph!=null && +w.mph<calm);
+}
 function windLineText(w){
   if(!w || !w.available) return tr('windUnavailable');
   const dir=compassLabel(w.from_compass||compassFromDeg(w.from_deg)||'');
   const mph=w.mph==null?'–':(Math.round(+w.mph*10)/10);
+  if(isLightWind(w)){
+    const g=covGeo();
+    const fromFac=(w.from_deg!=null && g && g.facFromDeg!=null && angDiff(+w.from_deg, g.facFromDeg)<=g.halfCone);
+    return tr('windLight',{mph, dir, fac:fromFac?tr('facDirBit'):''});
+  }
   const yn=w.blowing_from_plant_toward_school;
-  const toward=yn===true?tr('towardYes'):yn===false?tr('towardNo'):tr('windTooLight');
-  let line=tr('windLine',{mph, dir, toward});
+  const toward=yn===true?tr('towardYes'):yn===false?tr('towardNo'):'';
+  let line=tr('windLine',{mph, dir, toward}).trim();
   const pos=w.school_position;
   const extra=pos==='upwind'?tr('schoolUpwind'):pos==='downwind'?tr('schoolDownwind'):(yn==null?tr('schoolNeither'):'');
   if(extra){
@@ -623,7 +678,7 @@ function windLineText(w){
 function towardFlag(yn, available){
   if(yn===true) return '<span class="flag yes">'+tr('towardYes')+'</span>';
   if(yn===false) return '<span class="flag no">'+tr('towardNo')+'</span>';
-  return '<span class="flag">'+tr('windTooLight')+'</span>';
+  return '<span class="flag">'+tr('lightWind')+'</span>';
 }
 function posWord(pos){
   if(pos==='upwind') return tr('posUpwind');
@@ -655,17 +710,21 @@ function syncSheetOpen(){
   const sh=document.getElementById('sheet');
   const open=!!(sh && sh.classList.contains('open'));
   document.body.classList.toggle('sheet-open', open);
-  if(open && sh){
+  const hd=document.getElementById('top');
+  if(sh && hd){
+    const r=sh.getBoundingClientRect();
+    const gapBelow=Math.max(0, Math.round(window.innerHeight - r.bottom));
+    const maxH=Math.max(160, Math.round(window.innerHeight - gapBelow - hd.getBoundingClientRect().bottom - 10));
+    document.documentElement.style.setProperty('--sheet-max', maxH+'px');
     const top=sh.getBoundingClientRect().top;
-    const lift=Math.max(48, Math.round(window.innerHeight - top + 16));
+    const lift=Math.max(24, Math.round(window.innerHeight - top + 6));
     document.body.style.setProperty('--sheet-stack', lift+'px');
-    const hd=document.getElementById('top');
-    if(hd) document.body.style.setProperty('--attr-top', Math.round(hd.getBoundingClientRect().bottom+8)+'px');
-  } else {
-    document.body.style.removeProperty('--sheet-stack');
-    document.body.style.removeProperty('--attr-top');
   }
 }
+(function(){
+  const hd=document.getElementById('top');
+  if(hd && window.ResizeObserver){ new ResizeObserver(()=>syncSheetOpen()).observe(hd); }
+})();
 function initHeaderCompact(){
   const btn=document.getElementById('blurb-tog');
   function sync(){
@@ -687,9 +746,12 @@ function initHeaderCompact(){
       sync();
     });
   }
-  addEventListener('pagehide',()=>{
-    try{ if(localStorage.getItem('tf-header-compact')==null) localStorage.setItem('tf-header-compact','1'); }catch(e){}
-  });
+  if(!initHeaderCompact._hide){
+    initHeaderCompact._hide=true;
+    addEventListener('pagehide',()=>{
+      try{ if(localStorage.getItem('tf-header-compact')==null) localStorage.setItem('tf-header-compact','1'); }catch(e){}
+    });
+  }
   sync();
 }
 function bindLang(){
@@ -759,7 +821,7 @@ function renderWindArrow(){
       card.innerHTML=windCardHTML(w);
       card.hidden=false;
     } else {
-      card.innerHTML='<b>Wind</b><p>Wind data is unavailable right now.</p>';
+      card.innerHTML='<b>'+esc(tr('windUnavailable'))+'</b>';
       card.hidden=false;
     }
   }
@@ -776,7 +838,7 @@ function addWindControl(){
   const C=L.Control.extend({
     onAdd(){
       const d=L.DomUtil.create('div','wind-ctl');
-      d.innerHTML='<div class="wind-tools"><button type="button" class="chip" id="map-wind" aria-pressed="false"></button><button type="button" class="wind-help-btn" id="windhelp-map-btn" aria-expanded="false" aria-controls="windhelp-map"></button></div><div id="windhelp-map" class="wind-help" hidden></div><div id="windcard" class="wind-card" hidden></div><div id="map-north" class="map-north" hidden><i></i></div>';
+      d.innerHTML='<div class="wind-tools"><button type="button" class="chip" id="map-wind" aria-pressed="false"></button><button type="button" class="wind-help-btn" id="windhelp-map-btn" aria-expanded="false" aria-controls="windhelp-map"></button></div><div id="windhelp-map" class="wind-help" hidden></div><div id="windcard" class="wind-card" hidden></div><div class="wind-tools" style="margin-top:6px"><button type="button" class="chip" id="map-cov" aria-pressed="false"></button></div><div id="covnote" class="wind-card cov-note" hidden></div><div id="map-north" class="map-north" hidden><i></i></div>';
       L.DomEvent.disableClickPropagation(d);
       L.DomEvent.disableScrollPropagation(d);
       return d;
@@ -887,6 +949,7 @@ function renderNow(){
       </div>
       <p class="now-advice">${advice}</p>
       <p class="now-wind">${esc(windLineText(w))}</p>
+      ${(()=>{const t=covNowText(w);return t?`<p class="now-cov">${esc(t)}</p>`:''})()}
       <div class="now-links">
         <a href="#chart" id="goto-chart">${tr('seeChart')}</a>
         <a href="#spikes" id="goto-spikes" class="secondary">${tr('seeSpikes')}</a>
@@ -911,7 +974,7 @@ function renderNow(){
     if(w.available) bits.push((w.mph??'–')+' mph '+(compassLabel(w.from_compass||'')));
     if(yn===true) bits.push(tr('towardYes'));
     else if(yn===false) bits.push(tr('towardNo'));
-    else if(w.available) bits.push(tr('windTooLight'));
+    else if(w.available) bits.push(tr('lightWind'));
     ht.textContent=bits.length?bits.join(' · '):tr('airBriefing');
   }
 }
@@ -955,7 +1018,8 @@ function renderAct(){
 }
 function renderWhy(){
   const box=document.getElementById('why'); if(!box)return;
-  box.innerHTML=`<p>${tr('whyP1').replace('PurpleAir map','<a href="https://map.purpleair.com/" target="_blank" rel="noopener">PurpleAir map</a>')}</p>
+  const paA='<a href="https://map.purpleair.com/" target="_blank" rel="noopener">'+esc(tr('paMapName'))+'</a>';
+  box.innerHTML=`<p>${esc(tr('whyP1')).replace('{map}',paA)}</p>
     <p>${tr('whyP2')}</p>`;
 }
 function adviceFor(a, epa){
@@ -994,6 +1058,173 @@ function renderGuide(){
     msg.innerHTML=`<b>${c[1]} · ${c[4]}</b>. ${c[3]}`;
   } else msg.innerHTML=adviceFor(schoolA, schoolE);
 }
+/* ---- Sensor coverage: which directions from the facility have a sensor ---- */
+const COV_NEAR_KM=1.5;
+let COV_ON=false, covLayer=null, LTIDX=null, LTIDX_P=null;
+function geoBrgKm(lat1,lon1,lat2,lon2){
+  const R=Math.PI/180, p1=lat1*R, p2=lat2*R, dl=(lon2-lon1)*R;
+  const y=Math.sin(dl)*Math.cos(p2), x=Math.cos(p1)*Math.sin(p2)-Math.sin(p1)*Math.cos(p2)*Math.cos(dl);
+  const brg=(Math.atan2(y,x)/R+360)%360;
+  const a=Math.sin((p2-p1)/2)**2+Math.cos(p1)*Math.cos(p2)*Math.sin(dl/2)**2;
+  return {brg, km:6371*2*Math.asin(Math.sqrt(a))};
+}
+function covGeo(){
+  if(!DATA) return null;
+  const pl=DATA.places||{}, f=pl.facility||{lat:PLANT[0],lon:PLANT[1]}, sc=pl.school||{lat:SCHOOL[0],lon:SCHOOL[1]};
+  const halfCone=(((DATA.wind||{}).cone_deg)||60)/2;
+  const sensors=(DATA.sensors||[]).filter(s=>s&&s.lat!=null&&s.lon!=null).map(s=>{
+    const g=geoBrgKm(f.lat,f.lon,s.lat,s.lon); return {s, brg:g.brg, km:g.km};
+  });
+  const facFromDeg=geoBrgKm(sc.lat,sc.lon,f.lat,f.lon).brg; // wind from this bearing carries facility air to the school
+  return {f, sensors, halfCone, facFromDeg};
+}
+function covClassify(g, towardDeg){
+  const hit=g.sensors.filter(x=>angDiff(towardDeg,x.brg)<=g.halfCone).sort((a,b)=>a.km-b.km);
+  if(!hit.length) return {kind:'none'};
+  return {kind:hit[0].km<=COV_NEAR_KM?'near':'far', nearest:hit[0]};
+}
+const SECT8=['N','NE','E','SE','S','SW','W','NW'];
+function sect8(deg){ return SECT8[Math.round(((deg%360)+360)%360/45)%8]; }
+function joinList(arr){
+  if(!arr.length) return '';
+  if(arr.length===1) return arr[0];
+  return arr.slice(0,-1).join(tr('listSep'))+tr('andWord')+arr[arr.length-1];
+}
+function covWeek(g){
+  const ws=(DATA&&DATA.wind_series)||[];
+  const calm=((DATA.wind||{}).calm_mph)||4;
+  const c={near:0,far:0,none:0,light:0}, noneDir={};
+  let t0=null,t1=null;
+  ws.forEach(r=>{
+    if(!r||r[1]==null||r[2]==null) return;
+    t0=t0==null?r[0]:Math.min(t0,r[0]); t1=t1==null?r[0]:Math.max(t1,r[0]);
+    if(+r[1]<calm){c.light++; return;}
+    const tow=(+r[2]+180)%360, k=covClassify(g,tow).kind; c[k]++;
+    if(k==='none'){ const s8=sect8(tow); noneDir[s8]=(noneDir[s8]||0)+1; }
+  });
+  const total=c.near+c.far+c.none+c.light;
+  const days=t0==null?0:Math.max(1,Math.round((t1-t0+3600)/86400));
+  return {c,total,days,noneDir};
+}
+function covGapDirs(g){
+  const near=g.sensors.filter(x=>x.km<=COV_NEAR_KM);
+  return SECT8.filter((d,i)=>!near.some(x=>angDiff(i*45,x.brg)<=g.halfCone));
+}
+function covNearName(x){ return isKeySensor(x.s)?tr('schoolSensor'):displayName(x.s); }
+function covIntroText(g){
+  const near=g.sensors.filter(x=>x.km<=COV_NEAR_KM).sort((a,b)=>a.km-b.km);
+  const far=g.sensors.filter(x=>x.km>COV_NEAR_KM).sort((a,b)=>a.km-b.km);
+  const f1=v=>(Math.round(v*10)/10).toFixed(1);
+  const farTxt=far.length?(far.length===1?f1(far[0].km):f1(far[0].km)+'–'+f1(far[far.length-1].km)):'–';
+  const nearTxt=joinList(near.map(x=>covNearName(x)+' ('+tr('kmDirShort',{km:f1(x.km), dir:compassLabel(compassFromDeg(x.brg))})+')'));
+  const key=near.length===0?'covIntro0':near.length===1?'covIntro1':'covIntroN';
+  return tr(key,{n:near.length,total:g.sensors.length,r:COV_NEAR_KM,near:nearTxt,far:farTxt});
+}
+function covNowText(w){
+  const g=covGeo(); if(!g||!w||!w.available||w.from_deg==null) return '';
+  if(isLightWind(w)) return tr('covNowLight');
+  const tow=(+w.from_deg+180)%360, dir=compassLabel(compassFromDeg(tow)), k=covClassify(g,tow);
+  if(k.kind==='near') return tr('covNowNear',{dir, name:isKeySensor(k.nearest.s)?tr('nearName'):displayName(k.nearest.s)});
+  if(k.kind==='far') return tr('covNowFar',{dir, km:(Math.round(k.nearest.km*10)/10).toFixed(1)});
+  return tr('covNowNone',{dir});
+}
+function loadLtIdx(){
+  if(LTIDX_P) return LTIDX_P;
+  LTIDX_P=fetch('longterm/index.json?t='+Math.floor(Date.now()/3600000)).then(r=>r.ok?r.json():null).then(j=>{LTIDX=j; renderCoverage(); return j}).catch(()=>null);
+  return LTIDX_P;
+}
+function covLongText(){
+  const wl=LTIDX&&LTIDX.trends&&LTIDX.trends.wind_localized_correlation;
+  if(!wl) return '';
+  const rows=Object.keys(wl).sort().map(y=>({y, v:wl[y]})).filter(r=>r.v&&r.v.other_from_facility_pct!=null&&(r.v.other_days||0)>=60);
+  if(rows.length<2) return '';
+  const pcts=rows.map(r=>r.v.other_from_facility_pct);
+  return tr('covLong',{y0:rows[0].y, y1:rows[rows.length-1].y, lo:Math.min(...pcts), hi:Math.max(...pcts)});
+}
+function renderCoverage(){
+  const el=document.getElementById('coverage'); if(!el) return;
+  const g=covGeo(); if(!g||!g.sensors.length){el.hidden=true;return}
+  const wk=covWeek(g);
+  const rowsHTML=[];
+  if(wk.total){
+    const order=[['near','cov-near',tr('covNear',{r:COV_NEAR_KM})],['far','cov-far',tr('covFar')],['none','cov-none',tr('covNone')],['light','cov-light',tr('covLight')]];
+    const bar=order.map(([k,cls])=>wk.c[k]?`<i class="${cls}" style="width:${(100*wk.c[k]/wk.total).toFixed(2)}%"></i>`:'').join('');
+    const leg=order.map(([k,cls,lab])=>`<li><i class="${cls}"></i><span>${esc(lab)}</span><b>${esc(tr('covHours',{h:wk.c[k],pct:Math.round(100*wk.c[k]/wk.total)}))}</b></li>`).join('');
+    rowsHTML.push(`<p>${esc(tr('covWeekHead',{days:wk.days}))}</p><div class="covbar" role="img" aria-label="${esc(tr('covTitle'))}">${bar}</div><ul class="covleg">${leg}</ul>`);
+    const nd=Object.entries(wk.noneDir).sort((a,b)=>b[1]-a[1]).filter(([d,n])=>n>=Math.max(2,0.15*wk.c.none)).slice(0,3).map(([d])=>compassLabel(d));
+    if(wk.c.none && nd.length) rowsHTML.push(`<p>${esc(tr('covNoneDirs',{dirs:joinList(nd)}))}</p>`);
+  }
+  const longT=covLongText(); if(!LTIDX) loadLtIdx();
+  if(longT) rowsHTML.push(`<p>${esc(longT)}</p>`);
+  const gaps=covGapDirs(g).map(d=>compassLabel(d));
+  el.innerHTML=`<h3>${esc(tr('covTitle'))}</h3>
+    <p>${esc(covIntroText(g))}</p>
+    ${rowsHTML.join('')}
+    <p class="muted">${esc(tr('covWhy'))}</p>
+    ${gaps.length?`<p>${esc(tr('covGap',{r:COV_NEAR_KM, dirs:joinList(gaps)}))}</p>`:''}
+    <button type="button" class="chip" id="cov-map" aria-pressed="${COV_ON}">${esc(COV_ON?tr('covHideMap'):tr('covShowMap'))}</button>
+    <p class="muted" style="margin-top:6px">${esc(tr('covMapNote',{r:COV_NEAR_KM}))}</p>`;
+  el.hidden=false;
+  const b=document.getElementById('cov-map');
+  if(b) b.onclick=()=>{ setCoverage(!COV_ON, {focus:true}); };
+}
+function wedge(f, brg, half, km){
+  const pts=[[f.lat,f.lon]], R=Math.PI/180, kLat=1/110.574, kLon=1/(111.320*Math.cos(f.lat*R));
+  for(let a=brg-half;a<=brg+half+0.01;a+=4){ pts.push([f.lat+km*Math.cos(a*R)*kLat, f.lon+km*Math.sin(a*R)*kLon]); }
+  return pts;
+}
+function covGapLabelLL(g){
+  const covered=a=>g.sensors.some(x=>angDiff(a,x.brg)<=g.halfCone);
+  let best=null,run=0,start=0;
+  for(let a=0;a<720;a+=2){ if(!covered(a%360)){ if(run===0)start=a; run+=2; if(run<=360&&(!best||run>best.run))best={run,start}; } else run=0; }
+  if(!best||best.run<40) return null;
+  const mid=(best.start+best.run/2)%360, kmL=1.0, R=Math.PI/180;
+  return [g.f.lat+kmL*Math.cos(mid*R)/110.574, g.f.lon+kmL*Math.sin(mid*R)/(111.320*Math.cos(g.f.lat*R))];
+}
+function drawCoverage(){
+  if(covLayer){ map.removeLayer(covLayer); covLayer=null; }
+  const note=document.getElementById('covnote');
+  if(note) note.hidden=!COV_ON;
+  if(!COV_ON) return;
+  const g=covGeo(); if(!g) return;
+  const grp=L.layerGroup();
+  L.circle([g.f.lat,g.f.lon],{radius:COV_NEAR_KM*1000,color:'#16a34a',weight:1,dashArray:'4 5',fill:false,interactive:false}).addTo(grp);
+  g.sensors.slice().sort((a,b)=>b.km-a.km).forEach(x=>{
+    const near=x.km<=COV_NEAR_KM;
+    L.polygon(wedge(g.f,x.brg,g.halfCone,x.km),{stroke:false,fillColor:near?'#16a34a':'#64748b',fillOpacity:near?.22:.12,interactive:false}).addTo(grp);
+  });
+  // label the widest direction with no sensor at all
+  const ll=covGapLabelLL(g);
+  if(ll){
+    L.marker(ll,{interactive:false,keyboard:false,icon:L.divIcon({className:'',iconSize:[0,0],html:`<span class="cov-lab">${esc(tr('covMapNoSensor'))}</span>`})}).addTo(grp);
+  }
+  grp.addTo(map); covLayer=grp;
+}
+function syncCoverageUI(){
+  const m=document.getElementById('map-cov');
+  if(m){ m.textContent=COV_ON?tr('covChipOn'):tr('covChip'); m.setAttribute('aria-pressed',COV_ON?'true':'false'); m.classList.toggle('on',COV_ON); }
+  const b=document.getElementById('cov-map');
+  if(b){ b.textContent=COV_ON?tr('covHideMap'):tr('covShowMap'); b.setAttribute('aria-pressed',COV_ON?'true':'false'); }
+  const note=document.getElementById('covnote');
+  if(note){ note.textContent=tr('covMapNote',{r:COV_NEAR_KM}); note.hidden=!COV_ON; }
+}
+function setCoverage(on, opts){
+  COV_ON=!!on; drawCoverage(); syncCoverageUI();
+  if(COV_ON && opts && opts.focus && covLayer){
+    try{
+      const g=covGeo(); const pts=[[g.f.lat,g.f.lon]].concat(g.sensors.map(x=>[x.s.lat,x.s.lon]));
+      const lab=covGapLabelLL(g); if(lab) pts.push(lab);
+      const sh=document.getElementById('sheet'), hd=document.getElementById('top');
+      if(MOB() && sh && sh.classList.contains('open')){ sh.classList.remove('open'); syncSheetOpen(); }
+      const hb=hd?hd.getBoundingClientRect().bottom:80, sr=sh?sh.getBoundingClientRect():null;
+      let tl=[30,hb+16], br=[40,40];
+      if(MOB()){ if(sr) br=[30, Math.max(40, innerHeight-sr.top+16)]; }
+      else if(sr && sr.width<innerWidth*0.7){ tl=[sr.right+90, hb+16]; }
+      map.fitBounds(pts,{paddingTopLeft:tl,paddingBottomRight:br,maxZoom:14});
+    }catch(e){}
+  }
+}
+
 function render(){
   if(!DATA||!Array.isArray(DATA.sensors))return;
   const when=DATA.updated_pt||'';
@@ -1012,6 +1243,7 @@ function render(){
     if(a10!=null) bits.push(tr('last10',{n:a10}));
     pillepa.textContent=bits.join(' · ');
   }
+
   renderGuide();
   DATA.sensors.forEach(s=>{
     if(s==null||s.lat==null||s.lon==null)return;
@@ -1038,6 +1270,9 @@ function render(){
   renderWhy();
   renderBursts();
   renderSpikes();
+  renderCoverage();
+  drawCoverage();
+  syncCoverageUI();
   renderSensorNote();
   scheduleDrawChart();
 }
@@ -1075,7 +1310,7 @@ function tipHTML(p,compact){
     if(p.mph!=null){
       windBits=tr('windBits',{bits:(p.calm?tr('lightMph'):'')+p.mph+' mph'+(p.from?(' '+compassLabel(p.from)):'')+(p.from_deg!=null?` (${p.from_deg}°)`:'')});
     } else windBits=tr('windNa');
-    const facYn=p.from_facility===true?tr('yes'):p.from_facility===false?tr('no'):tr('windTooLight');
+    const facYn=p.from_facility===true?tr('yes'):p.from_facility===false?tr('no'):tr('unclearLight');
     windBlock=`<div>${windBits}</div><div>${tr('fromFacility',{yn:facYn})}</div>`;
   } else {
     const wind=p.mph!=null?(tr('windBits',{bits:(p.calm?tr('lightMph'):'')+p.mph+' mph'+(p.from?(' '+compassLabel(p.from)):'')})):'';
@@ -1099,7 +1334,24 @@ function renderSensorNote(){
     return `<li>${paLink(s.id,displayName(s))}${dist?`<div class="muted">${esc(dist)}</div>`:''}</li>`;
   };
   const items=(key?[key]:[]).concat(others).map(li).join('');
-  el.innerHTML=`<ul>${items||'<li>'+tr('spikeListEmpty')+'</li>'}</ul>`;
+  const g=covGeo();
+  let intro='';
+  if(g&&g.sensors.length){
+    const gaps=covGapDirs(g).map(d=>compassLabel(d));
+    intro=`<p class="covintro">${esc(covIntroText(g))}${gaps.length?' '+esc(tr('covGap',{r:COV_NEAR_KM, dirs:joinList(gaps)})):''}</p>`;
+  }
+  el.innerHTML=`${intro}<ul>${items||'<li>'+tr('spikeListEmpty')+'</li>'}</ul>`;
+  const m3=document.getElementById('methods3');
+  if(m3){
+    const cmp=sensors.filter(s=>!isKeySensor(s)&&s.km_facility!=null);
+    if(cmp.length){
+      const kms=cmp.map(s=>+s.km_facility), dirs=[];
+      cmp.slice().sort((a,b)=>a.km_facility-b.km_facility).forEach(s=>{const d=compassLabel(s.bearing_compass||''); if(d&&!dirs.includes(d)) dirs.push(d);});
+      const f1=v=>(Math.round(v*10)/10).toFixed(1);
+      m3.textContent=tr('methodsP3',{range:f1(Math.min(...kms))+'–'+f1(Math.max(...kms)), dirs:joinList(dirs)});
+      m3.hidden=false;
+    } else m3.hidden=true;
+  }
 }
 function placeFollow(p, opts){
   const park=!!(opts&&opts.park);
@@ -1125,9 +1377,9 @@ function placeFollow(p, opts){
       const ks=keySensor();
       const a60=ks&&ks.aqi?ks.aqi['60minute']:null;
       const e60=ks&&ks.aqi_epa?ks.aqi_epa['60minute']:null;
-      const bits=[tr('nowPark',{aqi:a60??p.aqi, time:fmtShort(p.t)})];
-      if(a60!=null && e60!=null) bits.push(rawEpaText(a60,e60));
-      if(p.aqi!=null) bits.push(tr('last10',{n:p.aqi}));
+      const head=a60!=null?(rawEpaText(a60,e60)||String(a60)):String(p.aqi);
+      const bits=[tr('nowPark',{aqi:head})];
+      if(p.aqi!=null) bits.push(tr('last10At',{n:p.aqi, time:fmtShort(p.t)}));
       lab.textContent=bits.join(' · ');
       lab.classList.toggle('left', px>br.width*0.62);
     } else {
@@ -1643,6 +1895,9 @@ function bindWindControls(){
   if(hc) hc.addEventListener('click',()=>toggleWindHelp('chart'));
   const hm=document.getElementById('windhelp-map-btn');
   if(hm) hm.addEventListener('click',()=>toggleWindHelp('map'));
+  const mc=document.getElementById('map-cov');
+  if(mc) mc.addEventListener('click',()=>setCoverage(!COV_ON));
+  syncCoverageUI();
   fillWindHelp();
 }
 function applyFilt(redraw){
@@ -1688,9 +1943,10 @@ function summarizeVisible(dateIso, episodes, meanAqi, meanOthers){
   const ovn=episodes.filter(e=>e.overnight).length;
   const mx=episodes.reduce((a,b)=>b.peak>a.peak?b:a);
   const word=FILT.sus?(n===1?tr('flaggedEpisode'):tr('flaggedEpisodes')):(n===1?tr('episode'):tr('episodes'));
-  let ep=`${n} ${word}`+(ovn?(n===1&&ovn===1?` (${tr('overnight')})`:` (${ovn} ${tr('overnight')})`):'');
-  let peak=`${tr('peakWord')} ${mx.peak} (${rawEpaText(mx.peak, mx.peak_epa)}) ${shortTimeFromPt(mx.peak_pt)}`;
-  if(mx.localized) peak+=', '+tr('localized');
+  const ovnWord=tr('overnight').toLowerCase(), locWord=tr('localized').toLowerCase();
+  let ep=`${n} ${word}`+(ovn?(n===1&&ovn===1?` (${ovnWord})`:` (${ovn} ${ovnWord})`):'');
+  let peak=tr('peakAt',{aqi:rawEpaText(mx.peak, mx.peak_epa)||String(mx.peak), time:shortTimeFromPt(mx.peak_pt)});
+  if(mx.localized) peak+=', '+locWord;
   const wfYes=episodes.filter(e=>e.wind_from_facility===true).length;
   const wfKnown=episodes.filter(e=>e.wind_from_facility!=null).length;
   const wind=wfKnown?tr('windFromFacCount',{yes:wfYes, known:wfKnown}):'';
@@ -1787,7 +2043,7 @@ function renderWindRose(){
   const lightBit=pack=>pack.light_pct?tr('roseLightBit',{pct:pack.light_pct}):'';
   const sub=(pack,name)=>`<div class="sub">${name}</div><p class="meta">${tr('roseMeta',{n:pack.n||0, pct:pack.from_facility_pct||0, light:lightBit(pack)})}</p>`;
   const x=sp.from_facility_pct||0, y=low.from_facility_pct||0;
-  el.innerHTML=`<p id="roselead">${tr('roseLead',{x,y})} <span class="caveat">${tr('roseCaveat')}</span></p>
+  el.innerHTML=`<p id="roselead">${tr('roseLead',{x,y})} <span class="caveat">${tr('roseCaveat')} ${tr('roseCaveat2')}</span></p>
     <div class="wr-title">${tr('roseTitle')}</div>
     <div class="pair">
       <div class="col">${roseSVG(sp,{color:'#c2410c',maxPct,facDeg:fac,label:tr('roseSpikes')})}${sub(sp,tr('roseSpikes'))}</div>
@@ -1807,9 +2063,14 @@ function renderSpikes(){
   renderWindRose();
   if(!days.length){box.innerHTML='<p class="empty">'+tr('spikeListEmpty')+'</p>';return}
   const openDates=new Set([...box.querySelectorAll('details.day[open]')].map(el=>el.getAttribute('data-date')));
-  const firstRender=!box.querySelector('details.day');
+  const firstRender=!box.querySelector('.day');
+  const firstWithItems=days.findIndex(d=>d._visible.length);
   box.innerHTML=days.map((day,i)=>{
     const items=day._visible;
+    if(!items.length){
+      const line0=summarizeVisible(day.date, items, day.mean_aqi, day.mean_others);
+      return `<div class="day day-empty" data-date="${day.date}"><p class="daysum">${esc(line0)}</p></div>`;
+    }
     const body=items.length?items.map(e=>{
       const badges=(e.overnight?'<span class="badge overnight">'+tr('overnightBadge')+'</span>':'')+(e.localized?'<span class="badge localized">'+tr('localizedBadge')+'</span>':'');
       const headAqi=rawEpaText(e.peak, e.peak_epa);
@@ -1818,9 +2079,9 @@ function renderSpikes(){
       const ks=keySensor();
       const src=`<div class="src">${paLink(ks.id,displayName(ks))}</div>`;
       const fac=factorText(e);
-      return `<div class="ep" role="button" tabindex="0" data-t="${e.peak_t}" data-id="${e.id}"><div class="head">${spanLabel(e)} · ${tr('peakWord')} ${headAqi||e.peak}${badges}</div><div class="meta">${esc(shortDay(day.date))} ${fmtShort(e.peak_t)} · ${esc(headAqi||('AQI '+e.peak))}${med}${wf}</div>${src}${fac?`<div class="factors">${esc(fac)}</div>`:''}</div>`;
+      return `<div class="ep" role="button" tabindex="0" data-t="${e.peak_t}" data-id="${e.id}"><div class="head">${spanLabel(e)} · ${tr('peakWord')} ${headAqi||e.peak}${badges}</div><div class="meta">${esc(shortDay(day.date))} ${fmtShort(e.peak_t)}${med}${wf}</div>${src}${fac?`<div class="factors">${esc(fac)}</div>`:''}</div>`;
     }).join(''):'<p class="empty">'+tr('noEpisodesView')+'</p>';
-    const open=firstRender?(i===0):openDates.has(day.date);
+    const open=firstRender?(i===firstWithItems):openDates.has(day.date);
     const line=summarizeVisible(day.date, items, day.mean_aqi, day.mean_others);
     return `<details class="day" data-date="${day.date}"${open?' open':''}><summary><div class="sum-body"><p class="daysum">${esc(line)}</p></div></summary><div class="day-body">${body}</div></details>`;
   }).join('');

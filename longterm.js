@@ -180,7 +180,11 @@
     const months=sen.n_months||'–';
     const excess=trends.mean_excess_near_minus_area||{};
     const wind=trends.wind_localized_correlation||{};
-    const w26=wind['2026']||{};
+    const wYears=Object.keys(wind).filter(y=>wind[y]&&wind[y].localized_days).sort();
+    const wYear=wYears.length?wYears[wYears.length-1]:(Object.keys(wind).sort().pop()||'');
+    const w26=wind[wYear]||{};
+    const schoolSrc=(idx.sources||[]).find(x=>x&&x.id==='school')||{};
+    const schoolStart=schoolSrc.first_daily||schoolSrc.start||'';
     const season=trends.seasonality_monthly_mean_ex_smoke||{};
     let hiM=null, loM=null, hi=null, lo=null;
     Object.keys(season).forEach(mm=>{
@@ -202,9 +206,9 @@
     const ul=document.createElement('ul');
     const takes=[
       tr('takeYoy',{list:fmtList(yoy)}),
-      tr('takeSlope',{slope, months}),
+      tr('takeSlope',{slope, months, schoolStart:schoolStart?fmtDay(schoolStart):'–'}),
       tr('takeExcess',{list:fmtList(excess)}),
-      tr('takeWind',{days:w26.localized_days??'–', pct:w26.localized_from_facility_pct??'–', other:w26.other_from_facility_pct??'–'}),
+      tr('takeWind',{year:wYear||'–', days:w26.localized_days??'–', pct:w26.localized_from_facility_pct??'–', other:w26.other_from_facility_pct??'–'}),
       tr('takeSeason',{hiMonth:monthName(hiM||''), hi:hi!=null?Number(hi).toFixed(1):'–', loMonth:monthName(loM||''), lo:lo!=null?Number(lo).toFixed(1):'–'}),
       tr('takeCounts'),
       tr('takeCaveat')

@@ -81,6 +81,13 @@
 .m{display:flex;align-items:center;justify-content:center;width:36px;height:36px;border-radius:10px;font:800 15px var(--font);font-variant-numeric:tabular-nums;
   border:2px solid rgba(255,255,255,.95);box-shadow:0 0 0 1px rgba(0,0,0,.25),0 3px 8px rgba(0,0,0,.25);transition:transform .15s;cursor:pointer}
 .m:hover{transform:scale(1.12)}
+.m.qa-x{opacity:.55;border:2px dashed #374151}
+.m.qa-c{border:2px dashed #92400e}
+.qa{margin:0 0 8px;padding:6px 8px;border-radius:8px;font-size:12px;line-height:1.4}
+.qa b{font-weight:700}
+.qa-x-note{background:#f3f4f6;color:#374151}
+.qa-c-note{background:#fef3c7;color:#92400e}
+#sensorlist .qa{margin:4px 0 0}
 .m.key{width:46px;height:46px;font-size:19px;border-radius:13px;box-shadow:0 0 0 2px #111827,0 4px 12px rgba(0,0,0,.35)}
 .m.na{background:#d1d5db!important;color:#6b7280!important}
 .place{display:flex;align-items:center;gap:6px;white-space:nowrap;font:600 11.5px var(--font);color:#374151;pointer-events:none}
@@ -578,6 +585,7 @@ details.day>summary .daysum{margin:0;font:500 12px var(--font);color:#4b5563;lin
         <div class="sect-body" id="methods">
         <p data-i18n="methodsP1">Map numbers are raw PurpleAir readings (the same as the PurpleAir map’s raw view). Each sensor card also shows an EPA-corrected AQI, an official adjustment that often reads a bit lower. Alerts and group-post thresholds use the raw 1-hour value. 10-minute short bursts are flagged for review only and do not by themselves trigger a group post.</p>
         <p id="methods3"></p>
+        <p id="methods4" hidden></p>
         <p class="muted" data-i18n="methodsP2">WHO 2021 guideline (reference only): 15 µg/m³ 24-hour, 5 µg/m³ annual. Sources: PurpleAir.com public sensors; U.S. EPA PM2.5 AQI; wind from Open-Meteo. This page does not claim the facility caused a given reading.</p>
         </div>
       </details>
@@ -596,6 +604,61 @@ function isKeySensor(s){
   if(!s) return false;
   if(s.id===KEY || s.key) return true;
   return /1a1a/i.test(String(s.name||s.public_label||''));
+}
+/* Sensor health check against PurpleAir's own map (A/B laser agreement), Nov 24, 2026.
+   excluded: left out of the "other sensors" median. caution: kept, but flagged in the UI. */
+const SENSOR_QA={145924:{status:'excluded',conf:68},77725:{status:'caution'}};
+const QA_DATE='2026-11-24';
+const LOCALIZED_DIFF=30; // same rule the watcher uses: school-area AQI at least 30 above the others' median
+function qaOf(s){const id=(s&&typeof s==='object')?s.id:s;return SENSOR_QA[+id]||null}
+function inBaseline(s){const q=qaOf(s);return !(q&&q.status==='excluded')}
+function medianOf(a){if(!a.length)return null;const b=a.slice().sort((x,y)=>x-y),m=b.length>>1;return b.length%2?b[m]:(b[m-1]+b[m])/2}
+function applyBaselineQA(){
+  if(DATA&&Array.isArray(DATA.sensors)&&DATA.pattern&&!DATA.pattern._qa){
+    const pat=DATA.pattern, k=DATA.sensors.find(isKeySensor);
+    const vals=DATA.sensors.filter(s=>s&&!isKeySensor(s)&&inBaseline(s)).map(s=>s.aqi&&s.aqi['60minute']).filter(v=>v!=null);
+    const med=medianOf(vals), a=k&&k.aqi&&k.aqi['60minute']!=null?k.aqi['60minute']:pat.key_aqi_60;
+    if(med!=null&&a!=null){
+      pat.others_median_60=med; pat.key_aqi_60=a; pat.diff=a-med;
+      if(pat.kind==='localized'&&pat.diff<LOCALIZED_DIFF) pat.kind='similar';
+      else if(pat.kind==='similar'&&pat.diff>=LOCALIZED_DIFF) pat.kind='localized';
+    }
+    pat._qa=1;
+  }
+  const ev=HIST&&HIST.evidence;
+  if(!HIST||!HIST.series||!ev||!Array.isArray(ev.points)||HIST._qa) return;
+  HIST._qa=1;
+  const ids=Object.keys(HIST.series).filter(id=>+id!==KEY&&inBaseline(+id));
+  const maps=ids.map(id=>new Map(HIST.series[id]||[]));
+  const ts=[...new Set(ids.flatMap(id=>(HIST.series[id]||[]).map(r=>r[0])))].sort((x,y)=>x-y);
+  if(!ts.length) return;
+  const medAt=t=>{
+    let lo=0,hi=ts.length-1;
+    while(lo<hi){const mid=(lo+hi)>>1; if(ts[mid]<t) lo=mid+1; else hi=mid;}
+    let i=lo; if(i>0&&Math.abs(ts[i-1]-t)<=Math.abs(ts[i]-t)) i=i-1;
+    if(Math.abs(ts[i]-t)>5400) return null;
+    const v=maps.map(m=>m.get(ts[i])).filter(x=>x!=null);
+    const m=medianOf(v); return m==null?null:Math.round(m);
+  };
+  const byT=new Map();
+  ev.points.forEach(p=>{
+    if(p.median!=null){ p.median=medAt(p.t); p.localized=p.median!=null&&p.aqi!=null&&(p.aqi-p.median)>=LOCALIZED_DIFF; }
+    byT.set(p.t,p);
+  });
+  const days=(ev.spikes&&ev.spikes.days)||[];
+  let locN=0;
+  days.forEach(d=>{
+    const meds=ev.points.filter(p=>p.median!=null&&ptDateISO(p.t)===d.date).map(p=>p.median);
+    if(meds.length) d.mean_others=Math.round(meds.reduce((x,y)=>x+y,0)/meds.length);
+    (d.episodes||[]).forEach(e=>{
+      const pk=byT.get(e.peak_t);
+      if(pk&&pk.median!=null) e.others_median=pk.median;
+      const inEp=ev.points.filter(p=>p.t>=e.start&&p.t<=e.end&&p.median!=null);
+      if(inEp.length) e.localized=inEp.some(p=>p.localized);
+      if(e.localized) locN++;
+    });
+  });
+  if(ev.spikes&&ev.spikes.week) ev.spikes.week.localized=locN;
 }
 function cmpLetter(s){
   const m=String((s&&s.name)||'').match(/Comparison sensor\s+([A-Z])/i);
@@ -915,6 +978,15 @@ function spark(series,w,h,opt={}){
   s+=`<line x1="${pl}" x2="${w-2}" y1="${Y(0)}" y2="${Y(0)}" stroke="#d1d5db"/>`;
   if(opt.peak){const pk=series.reduce((a,b)=>b[1]>a[1]?b:a);s+=`<circle cx="${X(pk[0])}" cy="${Y(pk[1])}" r="3.5" fill="#111827" stroke="#fff" stroke-width="1.5"/>`}
   return`<svg width="${w}" height="${h}" viewBox="0 0 ${w} ${h}" style="display:block;overflow:visible">${s}</svg>`}
+function qaNoteHTML(s){
+  const q=qaOf(s); if(!q) return '';
+  const date=fmtQaDate();
+  if(q.status==='excluded') return `<div class="qa qa-x-note"><b>${esc(tr('qaBadgeX'))}</b> · ${esc(tr('qaExcluded',{conf:q.conf,date}))}</div>`;
+  return `<div class="qa qa-c-note"><b>${esc(tr('qaBadgeC'))}</b> · ${esc(tr('qaCaution',{date}))}</div>`;
+}
+function fmtQaDate(){
+  try{return new Intl.DateTimeFormat(locName(),{month:'short',day:'numeric',year:'numeric',timeZone:'UTC'}).format(new Date(QA_DATE+'T12:00:00Z'))}catch(e){return QA_DATE}
+}
 function card(s,sw=276){
   const aqi=s.aqi||{}, epa=(s.aqi_epa||{});
   const a=aqi[W], e=epa[W], c=cat(a??0), fg=ink(a);const ser=HIST&&HIST.series&&HIST.series[s.id];
@@ -933,7 +1005,7 @@ function card(s,sw=276){
   return`<div class="ch" style="background:${col(a)};color:${fg}"><div class="nm">${esc(displayName(s))}${isKeySensor(s)?' ★':''}</div>
    <div class="ds">${esc(distBits.join(' · '))}</div>
    <div class="row"><div class="big">${a??'–'}</div><div class="ct"><small>${avgLab}</small>${a==null?tr('readingUnavailable'):c[1]}</div></div>${epaLine}<div class="msg">${a==null?tr('readingUnavailable'):c[3]}</div></div>
-   <div class="cb"><div class="chips">${[['10minute','10 Min'],['30minute','30 Min'],['60minute','1 hr'],['6hour','6 hr'],['24hour','1 Day'],['1week','Week']].map(([k,l])=>{
+   <div class="cb">${qaNoteHTML(s)}<div class="chips">${[['10minute','10 Min'],['30minute','30 Min'],['60minute','1 hr'],['6hour','6 hr'],['24hour','1 Day'],['1week','Week']].map(([k,l])=>{
      const rv=aqi[k], ev=epa[k];
      return `<div class="chip" style="background:${col(rv)};color:${ink(rv)}"><small>${l}</small><b>${rv??'–'}</b>${ev==null?'':`<span class="ep">EPA ~${ev}</span>`}</div>`}).join('')}</div>
    <div class="spk"><div class="t"><span>Last ${hrs||72} h (${isKeySensor(s)?'10-min':'hourly'} AQI, ${tr('raw')})</span><span>${pk?tr('peakBar',{n:pk[1], time:fmtT(pk[0])}):''}</span></div>${spark(ser,sw,isKeySensor(s)?52:44,{peak:1})}</div></div>`}
@@ -1100,7 +1172,7 @@ function covGeo(){
   if(!DATA) return null;
   const pl=DATA.places||{}, f=pl.facility||{lat:PLANT[0],lon:PLANT[1]}, sc=pl.school||{lat:SCHOOL[0],lon:SCHOOL[1]};
   const halfCone=(((DATA.wind||{}).cone_deg)||60)/2;
-  const sensors=(DATA.sensors||[]).filter(s=>s&&s.lat!=null&&s.lon!=null).map(s=>{
+  const sensors=(DATA.sensors||[]).filter(s=>s&&s.lat!=null&&s.lon!=null&&inBaseline(s)).map(s=>{
     const g=geoBrgKm(f.lat,f.lon,s.lat,s.lon); return {s, brg:g.brg, km:g.km};
   });
   const facFromDeg=geoBrgKm(sc.lat,sc.lon,f.lat,f.lon).brg; // wind from this bearing carries facility air to the school
@@ -1146,7 +1218,7 @@ function covIntroText(g){
   const farTxt=far.length?(far.length===1?f1(far[0].km):f1(far[0].km)+'–'+f1(far[far.length-1].km)):'–';
   const nearTxt=joinList(near.map(x=>covNearName(x)+' ('+tr('kmDirShort',{km:f1(x.km), dir:compassLabel(compassFromDeg(x.brg))})+')'));
   const key=near.length===0?'covIntro0':near.length===1?'covIntro1':'covIntroN';
-  return tr(key,{n:near.length,total:g.sensors.length,r:COV_NEAR_KM,near:nearTxt,far:farTxt});
+  return tr(key,{n:near.length,total:((DATA&&DATA.sensors)||[]).filter(x=>x&&x.lat!=null).length,r:COV_NEAR_KM,near:nearTxt,far:farTxt});
 }
 function covNowText(w){
   const g=covGeo(); if(!g||!w||!w.available||w.from_deg==null) return '';
@@ -1277,7 +1349,7 @@ function render(){
     if(s==null||s.lat==null||s.lon==null)return;
     const a=(s.aqi||{})[W],z=s.key?46:36;
     const icon=L.divIcon({className:'',iconSize:[z,z],iconAnchor:[z/2,z/2],popupAnchor:[0,-z/2],
-      html:`<div class="m${s.key?' key':''}${a==null?' na':''}" style="background:${col(a)};color:${ink(a)}">${a??'–'}</div>`});
+      html:`<div class="m${s.key?' key':''}${a==null?' na':''}${qaOf(s)?(' qa-'+(qaOf(s).status==='excluded'?'x':'c')):''}" style="background:${col(a)};color:${ink(a)}">${a??'–'}</div>`});
     let m=markers[s.id];
     if(!m){m=markers[s.id]=L.marker([s.lat,s.lon],{icon,zIndexOffset:s.key?1000:0,riseOnHover:true}).addTo(map);
       m.bindPopup('',{className:'card',maxWidth:300,minWidth:300,autoPanPaddingTopLeft:[20,150],autoPanPaddingBottomRight:[20,90],offset:[0,-2]});
@@ -1359,7 +1431,7 @@ function renderSensorNote(){
   const others=sensors.filter(s=>!isKeySensor(s)).slice().sort((a,b)=>(a.km_facility??99)-(b.km_facility??99));
   const li=s=>{
     const dist=s.km_facility==null?'':tr('kmOfFacility',{km:s.km_facility, dir:compassLabel(s.bearing_compass||'')});
-    return `<li>${paLink(s.id,displayName(s))}${dist?`<div class="muted">${esc(dist)}</div>`:''}</li>`;
+    return `<li>${paLink(s.id,displayName(s))}${dist?`<div class="muted">${esc(dist)}</div>`:''}${qaNoteHTML(s)}</li>`;
   };
   const items=(key?[key]:[]).concat(others).map(li).join('');
   const g=covGeo();
@@ -1371,7 +1443,7 @@ function renderSensorNote(){
   el.innerHTML=`${intro}<ul>${items||'<li>'+tr('spikeListEmpty')+'</li>'}</ul>`;
   const m3=document.getElementById('methods3');
   if(m3){
-    const cmp=sensors.filter(s=>!isKeySensor(s)&&s.km_facility!=null);
+    const cmp=sensors.filter(s=>!isKeySensor(s)&&inBaseline(s)&&s.km_facility!=null);
     if(cmp.length){
       const kms=cmp.map(s=>+s.km_facility), dirs=[];
       cmp.slice().sort((a,b)=>a.km_facility-b.km_facility).forEach(s=>{const d=compassLabel(s.bearing_compass||''); if(d&&!dirs.includes(d)) dirs.push(d);});
@@ -1379,6 +1451,17 @@ function renderSensorNote(){
       m3.textContent=tr('methodsP3',{range:f1(Math.min(...kms))+'–'+f1(Math.max(...kms)), dirs:joinList(dirs)});
       m3.hidden=false;
     } else m3.hidden=true;
+  }
+  const m4=document.getElementById('methods4');
+  if(m4){
+    const byStatus=st=>sensors.filter(x=>{const q=qaOf(x);return q&&q.status===st});
+    const xs=byStatus('excluded'), cs=byStatus('caution');
+    const bits=[];
+    if(xs.length) bits.push(tr('methodsQAx',{list:joinList(xs.map(x=>displayName(x))), conf:joinList(xs.map(x=>qaOf(x).conf+'%'))}));
+    if(cs.length) bits.push(tr('methodsQAc',{list:joinList(cs.map(x=>displayName(x)))}));
+    if(xs.length) bits.push(tr('methodsQAlt'));
+    m4.textContent=bits.length?tr('methodsQAhead',{date:fmtQaDate()})+' '+bits.join(' '):'';
+    m4.hidden=!bits.length;
   }
 }
 function placeFollow(p, opts){
@@ -2242,7 +2325,8 @@ async function load(first){
   try{
     const[d,h]=await Promise.all([fetch('data.json'+q).then(r=>{if(!r.ok)throw new Error('data');return r.json()}),fetch('history.json'+q).then(r=>r.ok?r.json():null).catch(()=>null)]);
     if(!d||!Array.isArray(d.sensors)){document.getElementById('upd').textContent='Waiting for sensor data…';return}
-    DATA=d;if(h)HIST=h
+    DATA=d;if(h)HIST=h;
+    try{applyBaselineQA()}catch(e){console.warn('baseline QA',e)}
   }catch(e){document.getElementById('upd').textContent='Could not load data, retrying…';return}
   render();peakText();
   if(first){

@@ -305,6 +305,50 @@ details.sect>summary{font-size:13.5px}
 #todaycard li{padding:3px 0;font-size:12px}
 #todaycard li a{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
 #panel-chart #nowbox h3{font-size:13.5px}
+
+.lt-wrap{margin:12px 0 4px;border:1px solid var(--bd);border-radius:12px;background:#fff;padding:0 10px 8px}
+.lt-wrap>summary{cursor:pointer;font:750 14px var(--font);color:#111827;padding:10px 4px;list-style:none;display:flex;align-items:center;justify-content:space-between;gap:8px}
+.lt-wrap>summary::-webkit-details-marker{display:none}
+.lt-wrap>summary:before{content:"▸";display:inline-block;width:1em;color:#6b7280}
+.lt-wrap[open]>summary:before{content:"▾"}
+.lt-lead{margin:0 2px 8px;font:500 12.5px/1.45 var(--font);color:#4b5563}
+.lt-ranges{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 8px}
+.lt-ranges button,.lt-years button,.lt-series button{min-height:32px;padding:4px 10px;border:1px solid var(--bd);border-radius:999px;background:#fff;font:650 12px var(--font);color:#374151;cursor:pointer}
+.lt-ranges button.on,.lt-years button.on{background:#111827;color:#fff;border-color:#111827}
+.lt-series button.on[data-k=s]{background:#14532d;color:#fff;border-color:#14532d}
+.lt-series button.on[data-k=n]{background:#1d4ed8;color:#fff;border-color:#1d4ed8}
+.lt-series button.on[data-k=m]{background:#4b5563;color:#fff;border-color:#4b5563}
+.lt-series button.on[data-k=r]{background:#9a3412;color:#fff;border-color:#9a3412}
+.lt-series{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 8px}
+.lt-series button{border-width:2px}
+.lt-series button[data-k=s]{border-color:#14532d}
+.lt-series button[data-k=n]{border-color:#1d4ed8}
+.lt-series button[data-k=m]{border-color:#6b7280}
+.lt-series button[data-k=r]{border-color:#9a3412}
+.lt-chart{position:relative;width:100%;height:min(220px,36vh);touch-action:pan-y;user-select:none;-webkit-user-select:none;cursor:crosshair}
+.lt-chart svg{display:block;width:100%;height:100%;overflow:visible}
+.lt-tip{position:absolute;pointer-events:none;z-index:3;background:#111827;color:#fff;border-radius:10px;padding:7px 9px;font:500 11.5px/1.35 var(--font);max-width:220px;box-shadow:0 4px 16px rgba(0,0,0,.25);display:none}
+.lt-tip b{display:block;font:700 12px var(--font);margin:0 0 2px}
+.lt-note{margin:6px 2px 0;font:500 11.5px/1.4 var(--font);color:#6b7280}
+.lt-years{display:flex;flex-wrap:wrap;gap:6px;margin:12px 0 8px}
+.lt-stats{display:grid;grid-template-columns:1fr 1fr;gap:6px 10px;margin:0 0 8px;font:500 12px/1.35 var(--font);color:#111827}
+.lt-stats div{background:#f8fafc;border:1px solid var(--bd);border-radius:10px;padding:6px 8px}
+.lt-stats b{display:block;font:700 11px var(--font);color:#6b7280;letter-spacing:.02em}
+.lt-trend{margin:10px 0 2px;border:1px solid var(--bd);border-radius:10px;padding:0 10px 8px;background:#f8fafc}
+.lt-trend>summary{cursor:pointer;font:750 13.5px var(--font);color:#111827;padding:9px 2px;list-style:none}
+.lt-trend>summary::-webkit-details-marker{display:none}
+.lt-trend ul{margin:0 0 8px;padding:0 0 0 1.1em;font:500 12.5px/1.45 var(--font);color:#111827}
+.lt-trend li{margin:0 0 6px}
+.lt-yoy{width:100%;border-collapse:collapse;font:500 12px var(--font);margin:0 0 8px}
+.lt-yoy th,.lt-yoy td{border-bottom:1px solid var(--bd);padding:4px 6px;text-align:right}
+.lt-yoy th:first-child,.lt-yoy td:first-child{text-align:left}
+.lt-yoy th{font:700 11px var(--font);color:#6b7280}
+.lt-nodata{margin:8px 0;font:500 13px var(--font);color:#6b7280;text-align:center}
+@media(max-width:639px){
+  .lt-stats{grid-template-columns:1fr}
+  .lt-chart{height:min(200px,34vh)}
+}
+
 </style>
 </head>
 <body>
@@ -361,6 +405,35 @@ details.sect>summary{font-size:13.5px}
         </div>
         <p class="muted" id="evnote">The in-chart tip’s “possible factors” are automated hints, not a finding that the facility or any other source caused a reading. Drag horizontally to move the dot; swipe vertically to scroll.</p>
       </div>
+      <details id="lt-wrap" class="lt-wrap">
+        <summary>Long-term history (2020–now)</summary>
+        <p class="lt-lead" id="lt-lead">Daily and yearly air-quality history around the Tesla Fremont facility, from several sources with different start dates. Open a range to load the charts. Nothing in this section claims the facility caused a reading.</p>
+        <div class="lt-series" id="lt-series" role="group" aria-label="Series"></div>
+        <div class="lt-ranges" id="lt-ranges" role="group" aria-label="Range">
+          <button type="button" data-r="1M">1M</button>
+          <button type="button" data-r="6M">6M</button>
+          <button type="button" data-r="YTD">YTD</button>
+          <button type="button" data-r="1Y">1Y</button>
+          <button type="button" data-r="5Y" class="on">5Y</button>
+          <button type="button" data-r="All">All</button>
+        </div>
+        <div id="lt-all" class="lt-chart" role="img" aria-label="Long-term daily AQI chart">
+          <svg id="lt-all-svg"></svg>
+          <div id="lt-all-tip" class="lt-tip" hidden></div>
+        </div>
+        <p class="lt-note" id="lt-all-note">Drag across the chart to zoom a stretch of dates. Hover or drag for a date and value. Shaded bands mark wildfire-smoke periods.</p>
+        <div class="lt-years" id="lt-years" role="group" aria-label="Year"></div>
+        <div id="lt-ystats" class="lt-stats"></div>
+        <div id="lt-year" class="lt-chart" role="img" aria-label="Single-year AQI chart">
+          <svg id="lt-year-svg"></svg>
+          <div id="lt-year-tip" class="lt-tip" hidden></div>
+        </div>
+        <p class="lt-note">The thin line is the daily value; dots are monthly averages. Years or series with no measurements show “no data.”</p>
+        <details id="lt-trend" class="lt-trend">
+          <summary>Emission trend analysis</summary>
+          <div id="lt-trend-body"></div>
+        </details>
+      </details>
     </div>
     <div id="panel-spikes" class="panel" role="tabpanel" aria-labelledby="tab-spikes" hidden>
       <div id="spikes">
@@ -1615,5 +1688,6 @@ addEventListener('resize',()=>{if(sheet.classList.contains('open')) scheduleDraw
 load(true).then(()=>{ if(P.get('tip')) maybeTipFromURL(); else if(location.hash) setTab(tabFromHash(),{hash:false}); });setInterval(load,5*60*1000);
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)load()});
 </script>
+<script src="longterm.js" defer></script>
 </body>
 </html>

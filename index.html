@@ -446,6 +446,7 @@ details.day>summary .daysum{margin:0;font:500 12px var(--font);color:#4b5563;lin
 .covleg li b{margin-left:auto;font-variant-numeric:tabular-nums;white-space:nowrap}
 .cov-near{background:#16a34a}.cov-far{background:#94a3b8}.cov-none{background:#dc2626}.cov-light{background:#e5e7eb;box-shadow:inset 0 0 0 1px #d1d5db}
 #cov-map,#map-cov{min-height:32px}
+.leaflet-top.leaflet-right{top:var(--ctl-top,0px);transition:top .15s}
 .cov-lab{font:650 11px/1.2 var(--font);color:#7f1d1d;background:rgba(255,255,255,.9);border:1px solid #fecaca;border-radius:6px;padding:2px 6px;white-space:nowrap;transform:translate(-50%,-50%);display:inline-block}
 .cov-note{font-size:11.5px;line-height:1.35;color:#374151;margin-top:6px;max-width:220px}
 #sensorlist .covintro{margin:0 0 8px;font-size:12.5px;line-height:1.45;color:#374151}
@@ -721,9 +722,25 @@ function syncSheetOpen(){
     document.body.style.setProperty('--sheet-stack', lift+'px');
   }
 }
+function syncCtlTop(){
+  /* keep the map's top-right buttons (wind, how to read, coverage) out from under the header */
+  const hd=document.getElementById('top'), ctl=document.querySelector('.leaflet-top.leaflet-right');
+  if(!hd||!ctl) return;
+  const h=hd.getBoundingClientRect(), c=ctl.getBoundingClientRect();
+  const kids=[...ctl.children].map(k=>k.getBoundingClientRect()).filter(r=>r.width>0);
+  const left=kids.length?Math.min(...kids.map(r=>r.left)):c.left;
+  const overlap=left < h.right+8;
+  document.documentElement.style.setProperty('--ctl-top', overlap?Math.round(h.bottom-4)+'px':'0px');
+}
 (function(){
   const hd=document.getElementById('top');
-  if(hd && window.ResizeObserver){ new ResizeObserver(()=>syncSheetOpen()).observe(hd); }
+  if(hd && window.ResizeObserver){
+    const ro=new ResizeObserver(()=>{syncSheetOpen(); syncCtlTop();});
+    ro.observe(hd);
+    const watchCtl=()=>{const c=document.querySelector('.leaflet-top.leaflet-right'); if(c) ro.observe(c); else setTimeout(watchCtl,300);};
+    watchCtl();
+  }
+  addEventListener('resize',syncCtlTop);
 })();
 function initHeaderCompact(){
   const btn=document.getElementById('blurb-tog');

@@ -253,6 +253,38 @@ details.sect>summary{font-size:13.5px}
 .wind-card{max-width:220px;background:rgba(255,255,255,.94);border:1px solid #e5e7eb;border-radius:10px;padding:7px 9px;box-shadow:0 2px 8px rgba(0,0,0,.14);font:500 12px/1.35 var(--font);color:#111827}
 .wind-card b{display:block;font-weight:750;margin:0 0 2px}
 .wind-card p{margin:0;color:#374151;font-weight:500}
+
+.todaycard{background:#f8fafc;border:1px solid var(--bd);border-radius:12px;padding:10px 12px;margin:0 0 10px}
+.todaycard h3{margin:0 0 4px;font:750 13.5px var(--font);color:#111827}
+.todaycard .sofar{font:500 11.5px var(--font);color:#6b7280}
+.todaycard .t-now{display:flex;align-items:center;gap:8px;margin:4px 0 6px;font:650 13px var(--font);color:#111827}
+.todaycard .t-aqi{display:inline-flex;align-items:center;justify-content:center;min-width:36px;height:28px;padding:0 7px;border-radius:8px;font:750 14px var(--font)}
+.todaycard p{margin:0 0 3px;font:500 12.5px/1.4 var(--font);color:#111827}
+.todaycard a{font:650 12.5px var(--font);color:#14532d}
+.todaycard .news-h{margin:8px 0 4px;font:750 12.5px var(--font);color:#111827}
+.todaycard .news-note{color:#4b5563;font-size:12px;margin:0 0 4px}
+.todaycard ul{list-style:none;margin:0;padding:0}
+.todaycard li{font-size:12.5px;line-height:1.35;padding:4px 0;border-top:1px solid var(--bd)}
+.todaycard li a{font-weight:650;color:#111827;text-decoration:underline;text-underline-offset:2px}
+.todaycard li .meta{display:block;color:#6b7280;font-size:11.5px;margin-top:1px}
+.wind-tools{display:flex;align-items:center;gap:6px;flex-wrap:wrap;justify-content:flex-end}
+.wind-help-btn{border:0;background:none;color:#14532d;font:650 12px var(--font);cursor:pointer;min-height:32px;padding:4px 2px;text-decoration:underline;text-underline-offset:2px}
+.wind-help-btn:focus-visible{outline:2px solid #111827;outline-offset:2px}
+.wind-help{background:#f8fafc;border:1px solid var(--bd);border-radius:10px;padding:8px 10px;margin:0 0 8px;font:500 12px/1.4 var(--font);color:#374151}
+.wind-help[hidden]{display:none}
+.wind-help p{margin:0 0 6px}
+.wind-help p:last-child{margin:0}
+.wh-diagram{display:flex;gap:8px;align-items:center;margin:0 0 8px}
+.wh-diagram svg{flex:none;width:108px;height:78px;background:#fff;border:1px solid #e5e7eb;border-radius:8px}
+.wh-diagram p{margin:0;flex:1}
+.wh-scale{list-style:none;margin:0 0 8px;padding:0;display:flex;flex-wrap:wrap;gap:8px 12px}
+.wh-scale li{display:flex;align-items:center;gap:6px;white-space:nowrap}
+.wh-scale svg{width:18px;height:18px}
+.map-north{width:36px;height:40px;background:rgba(255,255,255,.94);border:1px solid #e5e7eb;border-radius:8px;box-shadow:0 1px 4px rgba(0,0,0,.12);display:flex;flex-direction:column;align-items:center;justify-content:center;font:750 10px var(--font);color:#111827}
+.map-north[hidden]{display:none}
+.map-north i{width:0;height:0;border-left:5px solid transparent;border-right:5px solid transparent;border-bottom:11px solid #111827;margin-bottom:2px}
+.wind-ctl .wind-help{max-width:260px;margin:0}
+.wind-ctl .wind-help-btn{background:rgba(255,255,255,.92);border-radius:999px;padding:5px 10px;text-decoration:none;box-shadow:0 1px 4px rgba(0,0,0,.14)}
 </style>
 </head>
 <body>
@@ -280,6 +312,7 @@ details.sect>summary{font-size:13.5px}
   </div>
   <div id="sb">
     <div id="panel-now" class="panel on" role="tabpanel" aria-labelledby="tab-now">
+      <div id="todaycard" class="todaycard"></div>
       <div id="nowbox" class="block" style="border-top:0;margin-top:0;padding-top:4px"></div>
       <div id="aqi-guide" class="block">
         <div id="legchips"></div>
@@ -288,10 +321,14 @@ details.sect>summary{font-size:13.5px}
       <div class="block" id="evblock">
         <div class="evhead">
           <h3>Last 7 days</h3>
-          <button type="button" class="chip" id="tog-wind" aria-pressed="false">Show wind</button>
+          <div class="wind-tools">
+            <button type="button" class="chip" id="tog-wind" aria-pressed="false">Show wind</button>
+            <button type="button" class="wind-help-btn" id="windhelp-chart-btn" aria-expanded="false" aria-controls="windhelp-chart">(?) How to read</button>
+          </div>
         </div>
+        <div id="windhelp-chart" class="wind-help" hidden></div>
         <p class="muted" id="evcap">School-area sensor, 10-minute raw AQI. Overnight hours (10 PM–6 AM PT) are shaded gray.</p>
-        <p class="muted" id="windleg" hidden>Arrows point where the wind is going. Light green marks hours when the wind came from the facility direction.</p>
+        <p class="muted" id="windleg" hidden>Arrows point where the wind is going; size and color show speed. Light green marks hours when the wind came from the facility direction.</p>
         <div id="evchart" role="img" aria-label="Seven-day school-area AQI chart">
           <svg id="chart"></svg>
           <div id="evhair" hidden></div>
@@ -383,16 +420,15 @@ function renderWindArrow(){
   const w=DATA&&DATA.wind;
   if(windMark){map.removeLayer(windMark);windMark=null}
   const card=document.getElementById('windcard');
+  const north=document.getElementById('map-north');
+  if(north) north.hidden=!SHOW_WIND;
   if(!SHOW_WIND){
     if(card) card.hidden=true;
     return;
   }
   if(card){
     if(w&&w.available){
-      const speed=(w.mph!=null?(w.mph+' mph'):'')+(w.from_compass?(' from the '+w.from_compass):'')+(w.from_deg!=null?` (${w.from_deg}°)`:'');
-      let plain=w.toward_text||w.label||'';
-      if(w.calm) plain=w.toward_text||'Wind is light, so direction is less certain right now.';
-      card.innerHTML=`<b>${speed.trim()||'Wind'}</b><p>${plain}</p>`;
+      card.innerHTML=windCardHTML(w);
       card.hidden=false;
     } else {
       card.innerHTML='<b>Wind</b><p>Wind data is unavailable right now.</p>';
@@ -401,7 +437,9 @@ function renderWindArrow(){
   }
   if(!w||!w.available||w.from_deg==null)return;
   const going=(w.from_deg+180)%360; // arrow points where the wind is going
-  const html=`<div class="wind-arrow" title="Wind from ${w.from_compass} (${w.mph} mph)" style="transform:rotate(${going}deg)"><i></i></div>`;
+  const band=windBand(w.mph);
+  const sc=band.len/7.5;
+  const html=`<div class="wind-arrow" title="Wind from ${w.from_compass} (${w.mph} mph), blowing toward ${compassFromDeg((w.from_deg+180)%360)}" style="transform:rotate(${going}deg) scale(${sc.toFixed(2)})"><i style="border-bottom-color:${band.color};opacity:${band.op}"></i></div>`;
   windMark=L.marker(PLANT,{interactive:false,keyboard:false,zIndexOffset:500,icon:L.divIcon({className:'',iconSize:[36,36],iconAnchor:[18,30],html})}).addTo(map);
 }
 function addWindControl(){
@@ -410,7 +448,7 @@ function addWindControl(){
   const C=L.Control.extend({
     onAdd(){
       const d=L.DomUtil.create('div','wind-ctl');
-      d.innerHTML='<button type="button" class="chip" id="map-wind" aria-pressed="false">Show wind</button><div id="windcard" class="wind-card" hidden></div>';
+      d.innerHTML='<div class="wind-tools"><button type="button" class="chip" id="map-wind" aria-pressed="false">Show wind</button><button type="button" class="wind-help-btn" id="windhelp-map-btn" aria-expanded="false" aria-controls="windhelp-map">(?) How to read</button></div><div id="windhelp-map" class="wind-help" hidden></div><div id="windcard" class="wind-card" hidden></div><div id="map-north" class="map-north" hidden><i></i>N</div>';
       L.DomEvent.disableClickPropagation(d);
       L.DomEvent.disableScrollPropagation(d);
       return d;
@@ -596,6 +634,7 @@ function render(){
   if(dockId)show(dockId);
   renderWindArrow();
   renderNow();
+  renderToday();
   renderNews();
   renderAct();
   renderWhy();
@@ -872,19 +911,18 @@ function drawChart(){
   }
   if(SHOW_WIND){
     const yA=h-pb+8;
+    s+=`<g class="wnorth" transform="translate(${(pl+10).toFixed(1)},${yA.toFixed(1)})"><polygon points="0,-7 -3.2,5 3.2,5" fill="#111827"/><text x="0" y="16" text-anchor="middle" font-size="9" font-weight="700" fill="#111827">N</text></g>`;
     const minGap=15;
-    let lastX=-1e9;
+    let lastX=pl+16;
     const hours=wind.filter(r=>r&&r[2]!=null&&r[0]+3600>=t0&&r[0]<=t1).sort((a,b)=>a[0]-b[0]);
     for(const row of hours){
       const x=X(Math.min(Math.max(row[0]+1800,t0),t1));
       if(x-lastX<minGap) continue;
       lastX=x;
       const going=(row[2]+180)%360;
-      const fac=isFromFacility(row[2]);
-      const light=row[1]!=null&&row[1]<4;
-      const fill=fac?'#14532d':'#6b7280';
-      const op=light?0.4:0.9;
-      s+=`<g class="warw" transform="translate(${x.toFixed(1)},${yA.toFixed(1)}) rotate(${going.toFixed(0)})" opacity="${op}"><polygon points="0,-6 -3.6,5 3.6,5" fill="${fill}"/></g>`;
+      const band=windBand(row[1]);
+      const L=band.len, hw=Math.max(2.4,L*0.48);
+      s+=`<g class="warw" transform="translate(${x.toFixed(1)},${yA.toFixed(1)}) rotate(${going.toFixed(0)})" opacity="${band.op}"><polygon points="0,${(-L).toFixed(1)} ${(-hw).toFixed(1)},${(L*0.75).toFixed(1)} ${hw.toFixed(1)},${(L*0.75).toFixed(1)}" fill="${band.color}"/></g>`;
     }
   }
   svg.setAttribute('viewBox',`0 0 ${w} ${h}`);
@@ -906,6 +944,180 @@ function isFromFacility(deg){
 }
 let SHOW_WIND=false;
 const WIND_KEY='air-show-wind';
+const COMPASS16=["N","NNE","NE","ENE","E","ESE","SE","SSE","S","SSW","SW","WSW","W","WNW","NW","NNW"];
+function compassFromDeg(deg){
+  if(deg==null||deg!==deg) return '';
+  return COMPASS16[Math.floor((deg+11.25)%360/22.5)];
+}
+function windBand(mph){
+  if(mph==null||mph!==mph) return {len:6, color:'#9ca3af', op:0.5, label:'n/a'};
+  if(mph<4) return {len:5, color:'#94a3b8', op:0.55, label:'light'};
+  if(mph<=12) return {len:7.5, color:'#334155', op:0.92, label:'moderate'};
+  return {len:10.5, color:'#0f172a', op:1, label:'strong'};
+}
+function windCardHTML(w){
+  const from=w.from_compass||compassFromDeg(w.from_deg)||'';
+  const toward=compassFromDeg((w.from_deg+180)%360);
+  let head='Wind';
+  if(from && w.from_deg!=null) head=`Wind from the ${from} (${w.from_deg}°)`;
+  else if(from) head=`Wind from the ${from}`;
+  if(toward) head+=`, blowing toward the ${toward}`;
+  const bits=[];
+  if(w.mph!=null) bits.push(w.mph+' mph'+(w.calm||w.mph<4?' (light)':''));
+  if(w.blowing_from_plant_toward_school===true) bits.push('toward the school');
+  else if(w.blowing_from_plant_toward_school===false) bits.push('not toward the school');
+  let plain=bits.join(' · ');
+  if(w.calm||(w.mph!=null&&w.mph<4)){
+    plain+=(plain?'. ':'')+'Wind is light, so the air tends to linger and the direction is less reliable.';
+  }else if(w.blowing_from_plant_toward_school===true){
+    plain+=(plain?'. ':'')+'Blowing from the facility toward the school.';
+  }else if(w.blowing_from_plant_toward_school===false){
+    plain+=(plain?'. ':'')+'Not blowing from the facility toward the school.';
+  }
+  return `<b>${head}</b><p>${plain}</p>`;
+}
+function windHelpHTML(){
+  const arrow=(len,color)=>`<svg viewBox="0 0 18 18" aria-hidden="true"><polygon points="9,${(9-len).toFixed(1)} ${9-len*0.45},${9+len*0.7} ${9+len*0.45},${9+len*0.7}" fill="${color}"/></svg>`;
+  return `<div class="wh-diagram">
+    <svg viewBox="0 0 120 88" aria-hidden="true">
+      <text x="60" y="11" text-anchor="middle" font-size="10" font-weight="700" fill="#111827">N</text>
+      <circle cx="60" cy="22" r="4" fill="#111827"/>
+      <text x="70" y="25" font-size="8" fill="#374151">School</text>
+      <polygon points="60,30 55,50 65,50" fill="#14532d"/>
+      <rect x="56" y="70" width="8" height="8" fill="#111827"/>
+      <text x="70" y="78" font-size="8" fill="#374151">Facility</text>
+    </svg>
+    <p>The arrow points where the air is going. An arrow pointing up (north) means air is moving from the facility side toward the school.</p>
+  </div>
+  <p>Arrow length and color show speed:</p>
+  <ul class="wh-scale">
+    <li>${arrow(4,'#94a3b8')} Light — under 4 mph</li>
+    <li>${arrow(6,'#334155')} Moderate — 4 to 12 mph</li>
+    <li>${arrow(8,'#0f172a')} Strong — over 12 mph</li>
+  </ul>
+  <p>Light green shading on the chart marks hours when the wind came from the facility direction (from the south, toward the school).</p>
+  <p>When the wind is light (under 4 mph), the air tends to linger and the direction is less reliable. This is a correlation with wind direction, not a claim that the facility caused a reading.</p>`;
+}
+function fillWindHelp(){
+  const html=windHelpHTML();
+  ['windhelp-chart','windhelp-map'].forEach(id=>{
+    const el=document.getElementById(id);
+    if(el && !el.dataset.ready){el.innerHTML=html; el.dataset.ready='1'}
+  });
+}
+function toggleWindHelp(which){
+  fillWindHelp();
+  const panel=document.getElementById(which==='map'?'windhelp-map':'windhelp-chart');
+  const btn=document.getElementById(which==='map'?'windhelp-map-btn':'windhelp-chart-btn');
+  if(!panel||!btn)return;
+  const open=panel.hidden;
+  panel.hidden=!open;
+  btn.setAttribute('aria-expanded', open?'true':'false');
+}
+function ptTodayISO(){
+  return new Intl.DateTimeFormat('en-CA',{timeZone:'America/Los_Angeles',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
+}
+function ptDateISO(t){
+  return new Intl.DateTimeFormat('en-CA',{timeZone:'America/Los_Angeles',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date(t*1000));
+}
+function ptShortDay(iso){
+  const [y,m,d]=iso.split('-').map(Number);
+  const dt=new Date(Date.UTC(y,m-1,d,20));
+  return dt.toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric',timeZone:'UTC'});
+}
+function fmtClock(t){
+  return new Date(t*1000).toLocaleTimeString('en-US',{timeZone:'America/Los_Angeles',hour:'numeric',minute:'2-digit'});
+}
+let _todayISO=null;
+function renderToday(){
+  const el=document.getElementById('todaycard'); if(!el)return;
+  const today=ptTodayISO();
+  _todayISO=today;
+  const k=(DATA&&DATA.sensors||[]).find(s=>s.id===KEY||s.key);
+  const a10=k&&k.aqi?k.aqi['10minute']:null;
+  const a60=k&&k.aqi?k.aqi['60minute']:null;
+  const pts=(typeof evPoints==='function'?evPoints():[]).filter(p=>ptDateISO(p.t)===today);
+  let peak=null;
+  if(pts.length) peak=pts.reduce((a,b)=>b.aqi>a.aqi?b:a);
+  const mean=pts.length?Math.round(pts.reduce((s,p)=>s+p.aqi,0)/pts.length):null;
+  const meds=pts.map(p=>p.median).filter(v=>v!=null);
+  const meanOth=meds.length?Math.round(meds.reduce((s,v)=>s+v,0)/meds.length):null;
+  const rec=typeof evSpikes==='function'?evSpikes():{days:[]};
+  const day=(rec.days||[]).find(d=>d.date===today);
+  let eps=(day&&day.episodes)||[];
+  if(!day){
+    // day not in published record yet (just after midnight PT): count none unless points already exist
+    eps=[];
+  }
+  const n=eps.length, ovn=eps.filter(e=>e.overnight).length, loc=eps.filter(e=>e.localized).length;
+  const wfYes=eps.filter(e=>e.wind_from_facility===true).length;
+  const wfKnown=eps.filter(e=>e.wind_from_facility!=null).length;
+  const c10=a10==null?'–':a10;
+  const badge=`<span class="t-aqi" style="background:${col(a10)};color:${ink(a10)}">${c10}</span>`;
+  const cat10=a10==null?'':(' '+cat(a10)[1]);
+  let nowLine=`${badge}<span>Current AQI ${c10} (10-min raw)${cat10}${a60!=null?` · 1-hr ${a60}`:''}</span>`;
+  let peakLine='Peak so far: no 10-minute readings for today yet.';
+  if(peak) peakLine=`Peak so far: ${peak.aqi} at ${fmtClock(peak.t)} PT.`;
+  let spikeLine;
+  if(n===0) spikeLine='No suspicious spikes so far today.';
+  else{
+    const bits=[];
+    if(ovn) bits.push(ovn===n&&n===1?'overnight':`${ovn} overnight`);
+    if(loc) bits.push(loc===n&&n===1?'localized':`${loc} localized`);
+    spikeLine=`${n} suspicious spike${n===1?'':'s'} so far`+(bits.length?` (${bits.join(', ')})`:'');
+    if(wfKnown) spikeLine+=` · wind from facility ${wfYes} of ${wfKnown}`; spikeLine+='.';
+  }
+  let meanLine='Daily mean AQI: waiting for today’s readings.';
+  if(mean!=null && meanOth!=null) meanLine=`Daily mean AQI ${mean} vs others’ ${meanOth}.`;
+  else if(mean!=null) meanLine=`Daily mean AQI ${mean}.`;
+  const newsHTML=todayNewsHTML();
+  el.innerHTML=`<h3>Today, ${shortDay(today)} <span class="sofar">so far, Pacific Time</span></h3>
+    <div class="t-now">${nowLine}</div>
+    <p>${peakLine}</p>
+    <p>${spikeLine}</p>
+    <p>${meanLine}</p>
+    <p><a href="#spikes" id="today-spikes">See all spikes</a></p>
+    ${newsHTML}`;
+  const a=document.getElementById('today-spikes');
+  if(a) a.addEventListener('click',e=>{e.preventDefault(); setTab('spikes');});
+}
+function todayNewsHTML(){
+  const items=((DATA&&DATA.news&&DATA.news.items)||[]).slice();
+  const now=Date.now()/1000;
+  const recent=items.filter(it=>it.ts && (now-it.ts)<=24*3600).sort((a,b)=>b.ts-a.ts);
+  const older=items.slice().sort((a,b)=>(b.ts||0)-(a.ts||0));
+  const link=it=>{
+    const u=esc(it.url||'');
+    const ok=/^https?:/i.test(it.url||'');
+    const title=esc(it.title||'Untitled');
+    const meta=esc([it.outlet,it.date_pt].filter(Boolean).join(' · '));
+    const t=ok?`<a href="${u}" target="_blank" rel="noopener">${title}</a>`:`<span>${title}</span>`;
+    return `<li>${t}${meta?`<span class="meta">${meta}</span>`:''}</li>`;
+  };
+  let body, note='';
+  if(recent.length){
+    body=recent.slice(0,4).map(link).join('');
+  }else if(older.length){
+    note='<p class="news-note">No new coverage today. Most recent:</p>';
+    body=older.slice(0,2).map(link).join('');
+  }else{
+    note='<p class="news-note">No new coverage today.</p>';
+    body='';
+  }
+  return `<div class="news-h">In the news (last 24 hours)</div>${note}${body?`<ul>${body}</ul>`:''}`;
+}
+function watchMidnightPT(){
+  if(watchMidnightPT._on) return;
+  watchMidnightPT._on=true;
+  const tick=()=>{
+    const iso=ptTodayISO();
+    if(_todayISO && iso!==_todayISO) renderToday();
+  };
+  setInterval(tick, 15*1000);
+  document.addEventListener('visibilitychange',()=>{if(!document.hidden) tick()});
+}
+
+
 const FILT={sus:true,min:76,ovn:false,loc:false};
 const FILT_KEY='air-spikes-filters';
 function episodeJump(e){return e.jump===true || (e.jump==null && e.peak<76)}
@@ -1012,6 +1224,11 @@ function bindWindControls(){
   if(a) a.addEventListener('click', onClick);
   const b=document.getElementById('map-wind');
   if(b) b.addEventListener('click', onClick);
+  const hc=document.getElementById('windhelp-chart-btn');
+  if(hc) hc.addEventListener('click',()=>toggleWindHelp('chart'));
+  const hm=document.getElementById('windhelp-map-btn');
+  if(hm) hm.addEventListener('click',()=>toggleWindHelp('map'));
+  fillWindHelp();
 }
 function applyFilt(redraw){
   saveFilt();
@@ -1307,7 +1524,7 @@ document.getElementById('seg').onclick=e=>{const w=e.target.dataset&&e.target.da
 document.getElementById('pill').onclick=()=>{const m=markers[KEY];if(!m)return;if(MOB())show(KEY);else{m._pinned=true;m.openPopup()}};
 map.on('click',()=>{if(dockId)hide()});
 const sheet=document.getElementById('sheet');
-addWindControl();loadFilt();bindSpikeControls();bindWindControls();syncFiltUI();bindTabs();
+addWindControl();loadFilt();bindSpikeControls();bindWindControls();syncFiltUI();bindTabs();watchMidnightPT();
 if(location.hash || P.get('tip') || P.get('sheet')==='open'||(P.get('sheet')!=='closed'&&innerWidth>=640))sheet.classList.add('open');
 if(location.hash) setTab(tabFromHash(),{hash:false,open:true});
 document.getElementById('sh').onclick=()=>{sheet.classList.toggle('open'); if(sheet.classList.contains('open')) requestAnimationFrame(()=>drawChart())};

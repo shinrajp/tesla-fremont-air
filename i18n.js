@@ -22,6 +22,8 @@
   }
   const S = {
   "en": {
+    "zoomIn": "Zoom in",
+    "zoomOut": "Zoom out",
     "facDirBit": ", the facility’s direction",
     "lightWind": "Light wind",
     "unclearLight": "unclear (light wind)",
@@ -327,6 +329,8 @@
     "catChip": "{cat} · {range}"
   },
   "zh-Hans": {
+    "zoomIn": "放大",
+    "zoomOut": "缩小",
     "facDirBit": "，即来自设施的方向",
     "lightWind": "微风",
     "unclearLight": "不确定（微风）",
@@ -632,6 +636,8 @@
     "catChip": "{cat} · {range}"
   },
   "zh-Hant": {
+    "zoomIn": "放大",
+    "zoomOut": "縮小",
     "facDirBit": "，即來自設施的方向",
     "lightWind": "微風",
     "unclearLight": "不確定（微風）",
@@ -937,6 +943,8 @@
     "catChip": "{cat} · {range}"
   },
   "es": {
+    "zoomIn": "Acercar",
+    "zoomOut": "Alejar",
     "facDirBit": ", la dirección de la instalación",
     "lightWind": "Viento flojo",
     "unclearLight": "incierto (viento flojo)",

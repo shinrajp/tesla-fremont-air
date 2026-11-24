@@ -202,7 +202,7 @@ a.palink{color:#111827;font-weight:650;text-decoration:underline;text-underline-
 #tablist{display:none;gap:3px;padding:0 10px 8px;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;flex:none;overscroll-behavior:contain}
 #tablist::-webkit-scrollbar{display:none}
 #sheet.open #tablist{display:flex}
-#tablist [role=tab]{flex:1 1 0;min-width:4.2em;min-height:40px;padding:8px 10px;border:0;border-radius:10px;background:transparent;font:650 13px var(--font);color:#4b5563;cursor:pointer;white-space:nowrap}
+#tablist [role=tab]{flex:1 1 0;min-width:3.4em;min-height:40px;padding:8px 6px;border:0;border-radius:10px;background:transparent;font:650 12.5px var(--font);color:#4b5563;cursor:pointer;white-space:nowrap}
 #tablist [role=tab][aria-selected="true"]{background:#111827;color:#fff}
 #tablist [role=tab]:focus-visible{outline:2px solid #111827;outline-offset:2px}
 .panel{display:none}
@@ -242,7 +242,8 @@ details.sect>summary{font-size:13.5px}
 #filthint{font-size:11.5px;margin:2px 0 6px;line-height:1.3}
 #spikedef{margin:0 0 6px}
 
-.evhead{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:0 0 6px}
+.evhead{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:0 0 6px;flex-wrap:wrap}
+.wind-tools{display:flex;align-items:center;gap:4px 8px;flex-wrap:wrap;justify-content:flex-end}
 .evhead h3{margin:0}
 #windleg{margin:0 0 8px;font-size:12px;line-height:1.4}
 #windleg[hidden]{display:none}
@@ -285,6 +286,25 @@ details.sect>summary{font-size:13.5px}
 .map-north i{width:0;height:0;border-left:5px solid transparent;border-right:5px solid transparent;border-bottom:11px solid #111827;margin-bottom:2px}
 .wind-ctl .wind-help{max-width:260px;margin:0}
 .wind-ctl .wind-help-btn{background:rgba(255,255,255,.92);border-radius:999px;padding:5px 10px;text-decoration:none;box-shadow:0 1px 4px rgba(0,0,0,.14)}
+
+#tablist [role=tab]{flex:1 1 0;min-width:3.4em;min-height:40px;padding:8px 6px;border:0;border-radius:10px;background:transparent;font:650 12.5px var(--font);color:#4b5563;cursor:pointer;white-space:nowrap}
+.nowglance{padding:0 2px 8px}
+.now-aqi{text-align:center;margin:2px 0 8px}
+.now-aqi-num{display:inline-flex;align-items:center;justify-content:center;min-width:84px;height:84px;padding:0 10px;border-radius:28px;font:800 40px/1 var(--font);letter-spacing:-1px}
+.now-aqi-cat{font:750 16px var(--font);color:#111827;margin-top:8px}
+.now-aqi-meta{font:500 12px var(--font);color:#6b7280;margin-top:2px}
+.now-advice{text-align:center;font:500 13.5px/1.4 var(--font);color:#111827;margin:0 0 10px}
+.now-wind{text-align:center;font:650 13px/1.4 var(--font);color:#111827;background:#f8fafc;border:1px solid var(--bd);border-radius:10px;padding:8px 10px;margin:0 0 10px}
+.now-links{display:flex;gap:8px}
+.now-links a{flex:1;text-align:center;min-height:40px;display:flex;align-items:center;justify-content:center;border-radius:12px;font:700 13px var(--font);background:#111827;color:#fff;text-decoration:none;padding:8px 6px}
+.now-links a.secondary{background:#fff;color:#111827;border:1px solid var(--bd)}
+.now-links a:focus-visible{outline:2px solid #111827;outline-offset:2px}
+#todaycard{margin-bottom:8px}
+#todaycard .t-now{display:none}
+#todaycard .news-h{margin:6px 0 3px}
+#todaycard li{padding:3px 0;font-size:12px}
+#todaycard li a{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+#panel-chart #nowbox h3{font-size:13.5px}
 </style>
 </head>
 <body>
@@ -306,6 +326,7 @@ details.sect>summary{font-size:13.5px}
     <span class="tt" id="shtt">Air briefing</span><span class="pk" id="pk"></span></div>
   <div id="tablist" role="tablist" aria-label="Briefing sections">
     <button type="button" role="tab" id="tab-now" data-tab="now" aria-controls="panel-now" aria-selected="true" tabindex="0">Now</button>
+    <button type="button" role="tab" id="tab-chart" data-tab="chart" aria-controls="panel-chart" aria-selected="false" tabindex="-1">Chart</button>
     <button type="button" role="tab" id="tab-spikes" data-tab="spikes" aria-controls="panel-spikes" aria-selected="false" tabindex="-1">Spikes</button>
     <button type="button" role="tab" id="tab-news" data-tab="news" aria-controls="panel-news" aria-selected="false" tabindex="-1">News</button>
     <button type="button" role="tab" id="tab-details" data-tab="details" aria-controls="panel-details" aria-selected="false" tabindex="-1">Details</button>
@@ -313,6 +334,9 @@ details.sect>summary{font-size:13.5px}
   <div id="sb">
     <div id="panel-now" class="panel on" role="tabpanel" aria-labelledby="tab-now">
       <div id="todaycard" class="todaycard"></div>
+      <div id="nowglance" class="nowglance"></div>
+    </div>
+    <div id="panel-chart" class="panel" role="tabpanel" aria-labelledby="tab-chart" hidden>
       <div id="nowbox" class="block" style="border-top:0;margin-top:0;padding-top:4px"></div>
       <div id="aqi-guide" class="block">
         <div id="legchips"></div>
@@ -529,16 +553,52 @@ function renderBursts(){
 }
 function esc(s){return String(s??'').replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
 function renderNow(){
-  const box=document.getElementById('nowbox'); if(!box)return;
   const w=DATA.wind||{}, pat=DATA.pattern||{}, pl=DATA.places||{};
   const yn=w.blowing_from_plant_toward_school;
-  const flag=yn===true?'<span class="flag yes">Toward the school: yes</span>':yn===false?'<span class="flag no">Toward the school: no</span>':'<span class="flag">Toward the school: n/a</span>';
-  const pflag=pat.kind==='localized'?'<span class="flag warn">Localized</span>':pat.kind==='area-wide'?'<span class="flag warn">Area-wide</span>':pat.kind==='similar'?'<span class="flag no">Similar across sensors</span>':'';
-  const dist=(pl.note)||'';
-  box.innerHTML=`<h3>Right now</h3>
-    <div>${flag}${pflag}</div>
-    <p class="row2">${w.label||'Wind data is unavailable right now.'}${dist?' '+dist:''}</p>
-    <p>${pat.label||''}</p>`;
+  const k=(DATA&&DATA.sensors||[]).find(s=>s.id===KEY||s.key);
+  const a10=k&&k.aqi?k.aqi['10minute']:null;
+  const a60=k&&k.aqi?k.aqi['60minute']:null;
+  const c=a10==null?null:cat(a10);
+  const glance=document.getElementById('nowglance');
+  if(glance){
+    const num=a10==null?'–':String(a10);
+    const catName=c?c[1]:'Reading unavailable';
+    const advice=a10==null
+      ? 'School-area reading unavailable right now. Colors follow the U.S. EPA AQI scale; advice is for children.'
+      : c[3];
+    let windLine='Wind data is unavailable right now, toward the school: n/a';
+    if(w.available){
+      const dir=w.from_compass||compassFromDeg(w.from_deg)||'';
+      const mph=w.mph==null?'–':Math.round(+w.mph);
+      const toward=yn===true?'yes':yn===false?'no':'n/a';
+      windLine='Wind from '+(dir?dir+' ':'')+mph+' mph, toward the school: '+toward;
+    }
+    glance.innerHTML=`<div class="now-aqi">
+        <div class="now-aqi-num" style="background:${col(a10)};color:${ink(a10)}" aria-label="Current AQI ${num}">${num}</div>
+        <div class="now-aqi-cat">${esc(catName)}</div>
+        <div class="now-aqi-meta">${a10==null?'':'10-min raw'}${a60!=null?` · 1-hr ${a60}`:''}</div>
+      </div>
+      <p class="now-advice">${advice}</p>
+      <p class="now-wind">${esc(windLine)}</p>
+      <div class="now-links">
+        <a href="#chart" id="goto-chart">See 7-day chart</a>
+        <a href="#spikes" id="goto-spikes" class="secondary">See spikes</a>
+      </div>`;
+    const gc=document.getElementById('goto-chart');
+    const gs=document.getElementById('goto-spikes');
+    if(gc) gc.addEventListener('click',e=>{e.preventDefault(); setTab('chart');});
+    if(gs) gs.addEventListener('click',e=>{e.preventDefault(); setTab('spikes');});
+  }
+  const box=document.getElementById('nowbox');
+  if(box){
+    const flag=yn===true?'<span class="flag yes">Toward the school: yes</span>':yn===false?'<span class="flag no">Toward the school: no</span>':'<span class="flag">Toward the school: n/a</span>';
+    const pflag=pat.kind==='localized'?'<span class="flag warn">Localized</span>':pat.kind==='area-wide'?'<span class="flag warn">Area-wide</span>':pat.kind==='similar'?'<span class="flag no">Similar across sensors</span>':'';
+    const dist=(pl.note)||'';
+    box.innerHTML=`<h3>Localized vs area-wide</h3>
+      <div>${flag}${pflag}</div>
+      <p class="row2">${w.label||'Wind data is unavailable right now.'}${dist?' '+dist:''}</p>
+      <p>${pat.label||''}</p>`;
+  }
   const ht=document.getElementById('shtt');
   if(ht){
     const bits=[];
@@ -641,7 +701,7 @@ function render(){
   renderBursts();
   renderSpikes();
   renderSensorNote();
-  drawChart();
+  scheduleDrawChart();
 }
 let EV={pts:[],t0:0,t1:0,X:null,Y:null,ymax:100,w:0,h:0,pl:26,pt:8,pb:16,avg:null,active:null,lock:false,pending:null,spikes:[]};
 if(P.get('tip')&&+P.get('tip')){EV.pending=+P.get('tip');EV.active=+P.get('tip');EV.lock=true;}
@@ -835,16 +895,33 @@ function bindChart(){
   el.addEventListener('pointercancel',e=>{end(e); if(!EV.lock) parkLatest()});
   el.addEventListener('pointerleave',e=>{if(e.pointerType==='mouse'&&!EV.lock) parkLatest()});
 }
+function scheduleDrawChart(){
+  let tries=0;
+  const go=()=>{
+    const wrap=document.getElementById('evchart');
+    const panel=document.getElementById('panel-chart');
+    const sheet=document.getElementById('sheet');
+    if(panel&&panel.hidden)return;
+    if(sheet&&!sheet.classList.contains('open'))return;
+    if(!wrap||wrap.clientWidth<40||wrap.clientHeight<40){
+      if(++tries<30) requestAnimationFrame(go);
+      return;
+    }
+    drawChart();
+  };
+  requestAnimationFrame(()=>requestAnimationFrame(go));
+}
 function drawChart(){
   const svg=document.getElementById('chart');
-  const panel=document.getElementById('panel-now');
+  const panel=document.getElementById('panel-chart');
   if(!svg||!document.getElementById('sheet').classList.contains('open'))return;
   if(panel&&panel.hidden)return;
   const pts=evPoints();
   EV.pts=pts;
   const wrap=document.getElementById('evchart');
-  const w=(wrap&&wrap.clientWidth)||svg.clientWidth||600;
-  const h=(wrap&&wrap.clientHeight)||svg.clientHeight||180;
+  const w=(wrap&&wrap.clientWidth)||0;
+  const h=(wrap&&wrap.clientHeight)||0;
+  if(w<40||h<40){scheduleDrawChart();return}
   const ev=HIST&&HIST.evidence;
   if(!pts||pts.length<2){svg.innerHTML='';return}
   const t0=pts[0].t,t1=pts[pts.length-1].t;
@@ -1072,14 +1149,10 @@ function renderToday(){
   else if(mean!=null) meanLine=`Daily mean AQI ${mean}.`;
   const newsHTML=todayNewsHTML();
   el.innerHTML=`<h3>Today, ${shortDay(today)} <span class="sofar">so far, Pacific Time</span></h3>
-    <div class="t-now">${nowLine}</div>
     <p>${peakLine}</p>
     <p>${spikeLine}</p>
     <p>${meanLine}</p>
-    <p><a href="#spikes" id="today-spikes">See all spikes</a></p>
     ${newsHTML}`;
-  const a=document.getElementById('today-spikes');
-  if(a) a.addEventListener('click',e=>{e.preventDefault(); setTab('spikes');});
 }
 function todayNewsHTML(){
   const items=((DATA&&DATA.news&&DATA.news.items)||[]).slice();
@@ -1096,7 +1169,7 @@ function todayNewsHTML(){
   };
   let body, note='';
   if(recent.length){
-    body=recent.slice(0,4).map(link).join('');
+    body=recent.slice(0,2).map(link).join('');
   }else if(older.length){
     note='<p class="news-note">No new coverage today. Most recent:</p>';
     body=older.slice(0,2).map(link).join('');
@@ -1213,8 +1286,8 @@ function setShowWind(on, opts){
     if(location.hash!==want) history.replaceState(null,'',location.pathname+location.search+want);
   }
   renderWindArrow();
-  const now=document.getElementById('panel-now');
-  if(now&&!now.hidden) drawChart();
+  const panel=document.getElementById('panel-chart');
+  if(panel&&!panel.hidden) scheduleDrawChart();
 }
 function bindWindControls(){
   if(bindWindControls._bound)return;
@@ -1239,8 +1312,8 @@ function applyFilt(redraw){
   syncFiltUI();
   renderSpikes();
   if(redraw!==false){
-    const now=document.getElementById('panel-now');
-    if(now&&!now.hidden) drawChart();
+    const panel=document.getElementById('panel-chart');
+    if(panel&&!panel.hidden) scheduleDrawChart();
   }
 }
 function shortDay(iso){
@@ -1437,8 +1510,8 @@ function showEvidenceTip(t){
   if(t==null||t!==t)return;
   const sheet=document.getElementById('sheet');
   if(sheet&&!sheet.classList.contains('open')) sheet.classList.add('open');
-  setTab('now',{hash:false});
-  if(!EV.X){EV.pending=+t;drawChart();return}
+  setTab('chart',{hash:false});
+  if(!EV.X){EV.pending=+t;scheduleDrawChart();return}
   const i=nearestT(+t);
   if(i<0){EV.pending=+t;return}
   showTip(i,true);
@@ -1450,10 +1523,20 @@ function showEvidenceTip(t){
   }
 }
 window.showEvidenceTip=showEvidenceTip;
-const TABS=['now','spikes','news','details'];
-const TAB_ALIAS={chart:'now',evidence:'now',act:'details',why:'details',methods:'details',sensors:'details',bursts:'spikes'};
+const TABS=['now','chart','spikes','news','details'];
+const TAB_ALIAS={evidence:'chart',act:'details',why:'details',methods:'details',sensors:'details',bursts:'spikes'};
 function tabFromHash(){
-  const h=(location.hash||'').replace(/^#/,'').split('?')[0].toLowerCase();
+  const raw=(location.hash||'').replace(/^#/,'');
+  const h=raw.split('?')[0].toLowerCase();
+  const q=hashQuery();
+  const windOn=q.wind==='1'||q.wind==='true';
+  // Old shared links: #now?wind=1 opens the Chart tab with wind on.
+  if(h==='now' && windOn){
+    SHOW_WIND=true;
+    const want=filtHash('chart');
+    if(location.hash!==want) history.replaceState(null,'',location.pathname+location.search+want);
+    return 'chart';
+  }
   return TAB_ALIAS[h] || (TABS.includes(h)?h:'now');
 }
 function setTab(name, opts){
@@ -1475,7 +1558,7 @@ function setTab(name, opts){
     const want=filtHash(name);
     if(location.hash!==want) history.replaceState(null,'',location.pathname+location.search+want);
   }
-  if(name==='now') requestAnimationFrame(()=>drawChart());
+  if(name==='chart') scheduleDrawChart();
 }
 function bindTabs(){
   const list=document.getElementById('tablist'); if(!list||list._bound)return;
@@ -1493,7 +1576,7 @@ function bindTabs(){
     else if(e.key==='Home'){e.preventDefault();setTab(tabs[0].dataset.tab);tabs[0].focus()}
     else if(e.key==='End'){e.preventDefault();setTab(tabs[tabs.length-1].dataset.tab);tabs[tabs.length-1].focus()}
   });
-  addEventListener('hashchange',()=>{loadFilt();syncFiltUI();setTab(tabFromHash(),{hash:false});renderSpikes();renderWindArrow();const now=document.getElementById('panel-now');if(now&&!now.hidden)drawChart()});
+  addEventListener('hashchange',()=>{loadFilt();syncFiltUI();setTab(tabFromHash(),{hash:false});renderSpikes();renderWindArrow();const panel=document.getElementById('panel-chart');if(panel&&!panel.hidden)scheduleDrawChart()});
 }
 function maybeTipFromURL(){
   const raw=P.get('tip');if(!raw)return;
@@ -1527,8 +1610,8 @@ const sheet=document.getElementById('sheet');
 addWindControl();loadFilt();bindSpikeControls();bindWindControls();syncFiltUI();bindTabs();watchMidnightPT();
 if(location.hash || P.get('tip') || P.get('sheet')==='open'||(P.get('sheet')!=='closed'&&innerWidth>=640))sheet.classList.add('open');
 if(location.hash) setTab(tabFromHash(),{hash:false,open:true});
-document.getElementById('sh').onclick=()=>{sheet.classList.toggle('open'); if(sheet.classList.contains('open')) requestAnimationFrame(()=>drawChart())};
-addEventListener('resize',()=>{if(sheet.classList.contains('open')) drawChart()});
+document.getElementById('sh').onclick=()=>{sheet.classList.toggle('open'); if(sheet.classList.contains('open')) scheduleDrawChart()};
+addEventListener('resize',()=>{if(sheet.classList.contains('open')) scheduleDrawChart()});
 load(true).then(()=>{ if(P.get('tip')) maybeTipFromURL(); else if(location.hash) setTab(tabFromHash(),{hash:false}); });setInterval(load,5*60*1000);
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)load()});
 </script>

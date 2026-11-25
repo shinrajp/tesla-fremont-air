@@ -160,7 +160,7 @@ body.docked #sheet{display:none}
   #sheet,#dock{bottom:calc(20px + env(safe-area-inset-bottom))}
   .leaflet-control-zoom{display:none}
 }
-@media (min-width:2000px){#top{zoom:1.4}#sheet{zoom:1.4}.card .leaflet-popup-content-wrapper{zoom:1.35}}
+@media (min-width:2000px){#top{zoom:1.4}#sheet{zoom:1.4}.card .leaflet-popup-content{zoom:1.35}}
 
 #sheet{display:flex;flex-direction:column;max-height:min(80vh,760px)}
 #sb{overflow:auto;scrollbar-gutter:stable;-webkit-overflow-scrolling:touch;padding:0 12px calc(18px + env(safe-area-inset-bottom,0px));overscroll-behavior:contain}
@@ -779,7 +779,7 @@ function syncSheetOpen(){
     const r=sh.getBoundingClientRect();
     const gapBelow=Math.max(0, Math.round(window.innerHeight - r.bottom));
     const maxH=Math.max(160, Math.round(window.innerHeight - gapBelow - hd.getBoundingClientRect().bottom - 10));
-    document.documentElement.style.setProperty('--sheet-max', maxH+'px');
+    document.documentElement.style.setProperty('--sheet-max', Math.round(maxH/zoomOf(sh))+'px');
     const top=sh.getBoundingClientRect().top;
     const lift=Math.max(24, Math.round(window.innerHeight - top + 6));
     document.body.style.setProperty('--sheet-stack', lift+'px');
@@ -1464,6 +1464,13 @@ function renderSensorNote(){
     m4.hidden=!bits.length;
   }
 }
+/* On very wide screens #sheet uses CSS zoom. getBoundingClientRect() then reports zoomed
+   (on-screen) pixels, while left/top/scrollTop inside the sheet are in unzoomed pixels. */
+function zoomOf(el){
+  const w=el&&el.offsetWidth; if(!w) return 1;
+  const z=el.getBoundingClientRect().width/w;
+  return (z>0.25&&z<8)?z:1;
+}
 function placeFollow(p, opts){
   const park=!!(opts&&opts.park);
   const tip=document.getElementById('evtip'),hair=document.getElementById('evhair');
@@ -1475,12 +1482,16 @@ function placeFollow(p, opts){
   // Map through the SVG's own transform so the dot stays on the line even if the chart was
   // resized (e.g. a Windows scrollbar appearing) after it was drawn.
   const m=svg.getScreenCTM&&svg.getScreenCTM();
+  const z=zoomOf(box);
   const toBox=(x,y)=>{
-    if(m&&svg.createSVGPoint){const q=svg.createSVGPoint(); q.x=x; q.y=y; const c=q.matrixTransform(m); return [c.x-br.left, c.y-br.top];}
-    return [rec.left-br.left+x*(rec.width/EV.w), rec.top-br.top+y*(rec.height/EV.h)];
+    let v;
+    if(m&&svg.createSVGPoint){const q=svg.createSVGPoint(); q.x=x; q.y=y; const c=q.matrixTransform(m); v=[c.x-br.left, c.y-br.top];}
+    else v=[rec.left-br.left+x*(rec.width/EV.w), rec.top-br.top+y*(rec.height/EV.h)];
+    return [v[0]/z, v[1]/z];
   };
+  const bw=box.clientWidth||br.width/z, bh=box.clientHeight||br.height/z;
   let [px,py]=toBox(EV.X(p.t),EV.Y(p.aqi));
-  px=Math.max(10,Math.min(br.width-10,px));
+  px=Math.max(10,Math.min(bw-10,px));
   if(dot){
     dot.hidden=false;
     dot.classList.toggle('parked', park);
@@ -1498,7 +1509,7 @@ function placeFollow(p, opts){
       const bits=[tr('nowPark',{aqi:head})];
       if(p.aqi!=null) bits.push(tr('last10At',{n:p.aqi, time:fmtShort(p.t)}));
       lab.textContent=bits.join(' · ');
-      lab.classList.toggle('left', px>br.width*0.62);
+      lab.classList.toggle('left', px>bw*0.62);
     } else {
       lab.hidden=true;
     }
@@ -1516,24 +1527,24 @@ function placeFollow(p, opts){
     hair.hidden=false;
     hair.style.left=px+'px';
     hair.style.top=toBox(0,EV.pt)[1]+'px';
-    hair.style.bottom=(br.height-toBox(0,EV.h-EV.pb)[1])+'px';
+    hair.style.bottom=(bh-toBox(0,EV.h-EV.pb)[1])+'px';
   }
   if(tip){
     tip.hidden=false;
     tip.innerHTML=tipHTML(p,true);
     const tw=tip.offsetWidth,th=tip.offsetHeight,pad=6,gap=16;
     let left;
-    const canRight=px+gap+tw<=br.width-pad, canLeft=px-gap-tw>=pad;
-    if(px>br.width*0.45 && canLeft) left=px-gap-tw;
+    const canRight=px+gap+tw<=bw-pad, canLeft=px-gap-tw>=pad;
+    if(px>bw*0.45 && canLeft) left=px-gap-tw;
     else if(canRight) left=px+gap;
     else if(canLeft) left=px-gap-tw;
-    else left=Math.max(pad, Math.min(px-tw/2, br.width-tw-pad));
-    left=Math.max(pad, Math.min(left, br.width-tw-pad));
+    else left=Math.max(pad, Math.min(px-tw/2, bw-tw-pad));
+    left=Math.max(pad, Math.min(left, bw-tw-pad));
     let top;
     if(py-12-th>=pad) top=py-12-th;
-    else if(py+16+th<=br.height-pad) top=py+16;
-    else top=Math.max(pad, Math.min(py-th/2, br.height-th-pad));
-    top=Math.max(pad, Math.min(top, br.height-th-pad));
+    else if(py+16+th<=bh-pad) top=py+16;
+    else top=Math.max(pad, Math.min(py-th/2, bh-th-pad));
+    top=Math.max(pad, Math.min(top, bh-th-pad));
     tip.style.left=left+'px';
     tip.style.top=top+'px';
   }
@@ -2293,7 +2304,7 @@ function setTab(name, opts){
       const sb=document.getElementById('sb');
       const guide=document.getElementById('legchips')||document.getElementById('aqi-guide');
       if(!sb||!guide) return;
-      const delta=guide.getBoundingClientRect().top-sb.getBoundingClientRect().top-6;
+      const delta=(guide.getBoundingClientRect().top-sb.getBoundingClientRect().top)/zoomOf(sb)-6;
       sb.scrollTop=Math.max(0,sb.scrollTop+delta);
     };
     requestAnimationFrame(()=>requestAnimationFrame(alignGuide));

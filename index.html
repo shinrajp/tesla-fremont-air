@@ -163,7 +163,7 @@ body.docked #sheet{display:none}
 @media (min-width:2000px){#top{zoom:1.4}#sheet{zoom:1.4}.card .leaflet-popup-content-wrapper{zoom:1.35}}
 
 #sheet{display:flex;flex-direction:column;max-height:min(80vh,760px)}
-#sb{overflow:auto;-webkit-overflow-scrolling:touch;padding:0 12px calc(18px + env(safe-area-inset-bottom,0px));overscroll-behavior:contain}
+#sb{overflow:auto;scrollbar-gutter:stable;-webkit-overflow-scrolling:touch;padding:0 12px calc(18px + env(safe-area-inset-bottom,0px));overscroll-behavior:contain}
 #evchart{position:relative;width:100%;height:min(220px,32vh);touch-action:pan-y;-webkit-user-select:none;user-select:none;cursor:crosshair}
 #evchart #evsvg,#evsvg{width:100%;height:100%;display:block;overflow:visible}
 .block{margin-top:12px;padding-top:10px;border-top:1px solid var(--bd)}
@@ -1472,9 +1472,15 @@ function placeFollow(p, opts){
   if(!svg||!box||!EV.X||!p)return;
   const rec=svg.getBoundingClientRect(),br=box.getBoundingClientRect();
   if(!rec.width||!EV.w)return;
-  const sx=rec.width/EV.w,sy=rec.height/EV.h;
-  const px=rec.left-br.left+EV.X(p.t)*sx;
-  const py=rec.top-br.top+EV.Y(p.aqi)*sy;
+  // Map through the SVG's own transform so the dot stays on the line even if the chart was
+  // resized (e.g. a Windows scrollbar appearing) after it was drawn.
+  const m=svg.getScreenCTM&&svg.getScreenCTM();
+  const toBox=(x,y)=>{
+    if(m&&svg.createSVGPoint){const q=svg.createSVGPoint(); q.x=x; q.y=y; const c=q.matrixTransform(m); return [c.x-br.left, c.y-br.top];}
+    return [rec.left-br.left+x*(rec.width/EV.w), rec.top-br.top+y*(rec.height/EV.h)];
+  };
+  let [px,py]=toBox(EV.X(p.t),EV.Y(p.aqi));
+  px=Math.max(10,Math.min(br.width-10,px));
   if(dot){
     dot.hidden=false;
     dot.classList.toggle('parked', park);
@@ -1509,8 +1515,8 @@ function placeFollow(p, opts){
   if(hair){
     hair.hidden=false;
     hair.style.left=px+'px';
-    hair.style.top=(rec.top-br.top+EV.pt*sy)+'px';
-    hair.style.bottom=(br.bottom-rec.bottom+EV.pb*sy)+'px';
+    hair.style.top=toBox(0,EV.pt)[1]+'px';
+    hair.style.bottom=(br.height-toBox(0,EV.h-EV.pb)[1])+'px';
   }
   if(tip){
     tip.hidden=false;
@@ -1635,8 +1641,8 @@ function drawChart(){
   const t0=pts[0].t,t1=pts[pts.length-1].t;
   const mx=Math.max(100,...pts.map(p=>p.aqi||0));
   const ymax=Math.ceil(mx/50)*50;
-  const pl=26,pb=28,pt=8;
-  const X=t=>pl+(t-t0)/(t1-t0)*(w-pl-2);
+  const pl=26,pb=28,pt=10,pr=12; // pr keeps the 20px highlight dot on the latest reading inside the chart
+  const X=t=>pl+(t-t0)/(t1-t0)*(w-pl-pr);
   const Y=a=>pt+(1-Math.min(a,ymax)/ymax)*(h-pt-pb);
   EV.t0=t0;EV.t1=t1;EV.X=X;EV.Y=Y;EV.ymax=ymax;EV.w=w;EV.h=h;EV.pl=pl;EV.pt=pt;EV.pb=pb;
   EV.avg=(ev&&ev.average!=null)?ev.average:Math.round(pts.reduce((s,p)=>s+p.aqi,0)/pts.length);
@@ -2350,6 +2356,13 @@ syncSheetOpen();
 if(location.hash) setTab(tabFromHash(),{hash:false,open:true});
 document.getElementById('sh').onclick=()=>{sheet.classList.toggle('open'); syncSheetOpen(); if(sheet.classList.contains('open')) scheduleDrawChart()};
 addEventListener('resize',()=>{syncSheetOpen(); if(sheet.classList.contains('open')) scheduleDrawChart()});
+if(window.ResizeObserver){
+  const evbox=document.getElementById('evchart');
+  if(evbox) new ResizeObserver(()=>{
+    if(!EV.w||!sheet.classList.contains('open')) return;
+    if(Math.abs(evbox.clientWidth-EV.w)>1||Math.abs(evbox.clientHeight-EV.h)>1) scheduleDrawChart();
+  }).observe(evbox);
+}
 (function(){const sh=document.getElementById('sheet'); if(sh) sh.addEventListener('transitionend',syncSheetOpen);})();
 load(true).then(()=>{ if(P.get('tip')) maybeTipFromURL(); else if(location.hash) setTab(tabFromHash(),{hash:false}); });setInterval(load,5*60*1000);
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)load()});
